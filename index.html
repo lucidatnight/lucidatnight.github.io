@@ -60,6 +60,19 @@ button:focus-visible,a:focus-visible,input:focus-visible,textarea:focus-visible{
 #offline.show{display:block}
 #offline b{color:var(--error);font-weight:500}
 
+/* ── dreamer counter ─────────────────────── */
+#counter{
+  position:fixed;right:18px;bottom:16px;z-index:50;
+  font-size:10px;letter-spacing:.2em;text-transform:uppercase;
+  color:var(--glow);background:rgba(0,0,0,.72);backdrop-filter:blur(8px);
+  border:1px solid var(--edge);border-radius:99px;padding:8px 15px;
+  font-variant-numeric:tabular-nums;opacity:0;transition:opacity .6s ease;
+  pointer-events:none;
+}
+#counter.show{opacity:1}
+#counter b{color:var(--pulse);font-weight:600}
+@media(max-width:560px){#counter{right:12px;bottom:12px;font-size:9px;padding:7px 12px}}
+
 /* ── landing ─────────────────────────────── */
 .wrap{display:grid;grid-template-columns:1fr 1fr;min-height:100vh}
 .hero{display:flex;flex-direction:column;justify-content:center;padding:70px 60px;position:relative}
@@ -88,12 +101,14 @@ button:focus-visible,a:focus-visible,input:focus-visible,textarea:focus-visible{
 
 /* ── app shell ───────────────────────────── */
 .shell{max-width:660px;margin:0 auto;padding:0 24px 120px}
-.topbar{position:sticky;top:0;z-index:20;background:linear-gradient(to bottom,rgba(0,0,0,.96) 60%,rgba(0,0,0,0));backdrop-filter:blur(14px);display:flex;align-items:center;justify-content:space-between;gap:20px;padding:22px 0 26px}
+.topbar{position:sticky;top:0;z-index:20;background:linear-gradient(to bottom,rgba(0,0,0,.96) 62%,rgba(0,0,0,0));backdrop-filter:blur(14px);display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;padding:20px 0 24px}
 .topbar .wordmark{font-size:21px;margin:0}
-.nav{display:flex;gap:2px}
-.nav button{font-family:var(--sans);font-size:11px;font-weight:500;letter-spacing:.14em;text-transform:uppercase;background:none;border:none;color:var(--glow);padding:8px 13px;border-radius:2px;cursor:pointer;transition:color .25s,background .25s}
+.nav{display:flex;gap:0;flex-wrap:wrap;justify-content:flex-end}
+.nav button{font-family:var(--sans);font-size:10.5px;font-weight:500;letter-spacing:.1em;text-transform:uppercase;white-space:nowrap;background:none;border:none;color:var(--glow);padding:8px 10px;border-radius:2px;cursor:pointer;transition:color .25s,background .25s}
 .nav button:hover{color:var(--pulse)}
 .nav button.on{color:var(--night);background:var(--dream)}
+.nav #topSignout{color:#4a4470;margin-left:4px}
+.nav #topSignout:hover{color:var(--error)}
 
 .av{border-radius:50%;background:var(--mist);flex:none;display:grid;place-items:center;overflow:hidden;font-family:var(--type);color:var(--pulse);border:1px solid var(--edge)}
 .av img{width:100%;height:100%;object-fit:cover;display:block}
@@ -179,6 +194,7 @@ input[type=date]{width:100%;background:var(--night);border:1px solid var(--edge)
 <div id="stars"></div>
 <div id="aura"></div>
 <div id="app"></div>
+<div id="counter" aria-live="polite"></div>
 
 <script>
 (function(){
@@ -333,6 +349,7 @@ function topbar(){
     + '<button data-v="key" class="' + (view==='key'?'on':'') + '">Your Key</button>'
     + '<button data-v="mall" class="' + (view==='mall'?'on':'') + '">Mall World</button>'
     + '<button data-v="profile" class="' + (view==='profile'&&!viewing?'on':'') + '">' + esc(me.handle) + '</button>'
+    + '<button id="topSignout" title="Sign out" aria-label="Sign out">Sign out</button>'
     + '</nav></div>';
 }
 
@@ -499,7 +516,7 @@ function wire(){
       password: $('suPassword').value
     }}).then(function(d){
       // Hold the user back so the key screen (part of the signed-out view) can show.
-      pendingUser = d.user; pendingKey = d.user.lucidKey; render();
+      pendingUser = d.user; pendingKey = d.user.lucidKey; render(); loadStats();
     }).catch(function(err){
       flash = { t:'err', m: err.message === 'offline'
         ? 'Cannot reach Lucid right now. Try again shortly.' : err.message };
@@ -640,11 +657,16 @@ function wire(){
     });
   };
 
-  var so = $('signout');
-  if (so) so.onclick = function(){
+  function doSignout(){
     api('/api/signout', { method:'POST' }).catch(function(){})
-      .then(function(){ me = null; view = 'feed'; cache = { posts:[], profile:null, encounters:null }; render(); });
-  };
+      .then(function(){
+        me = null; view = 'feed'; viewing = null;
+        cache = { posts:[], profile:null, encounters:null };
+        render(); loadStats();
+      });
+  }
+  var so = $('signout'); if (so) so.onclick = doSignout;
+  var tso = $('topSignout'); if (tso) tso.onclick = doSignout;
 }
 
 /* ── loaders ─────────────────────────────── */
@@ -668,6 +690,20 @@ function openProfile(handle){
   }).catch(function(err){ flash = { t:'err', m: err.message }; cache.profile = null; render(); });
 }
 
+/* ── how many dreamers ───────────────────── */
+function loadStats(){
+  return fetch(API + '/api/stats', { credentials:'include' })
+    .then(function(r){ return r.json(); })
+    .then(function(d){
+      var el = document.getElementById('counter');
+      if (!el || typeof d.dreamers !== 'number') return;
+      el.innerHTML = '<b>' + d.dreamers.toLocaleString() + '</b> ' +
+        (d.dreamers === 1 ? 'dreamer' : 'dreamers');
+      el.classList.add('show');
+    })
+    .catch(function(){ /* a missing count is not worth an error message */ });
+}
+
 /* ── starfield ───────────────────────────── */
 (function(){
   var el = document.getElementById('stars'), frag = document.createDocumentFragment();
@@ -682,6 +718,7 @@ function openProfile(handle){
 
 /* ── boot ────────────────────────────────── */
 render();
+loadStats();
 api('/api/me').then(function(d){
   if (d.user){ me = d.user; loadFeed(); }
 }).catch(function(){ /* landing is already on screen; banner explains it */ });
