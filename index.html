@@ -170,6 +170,22 @@ input[type=date]{width:100%;background:var(--night);border:1px solid var(--edge)
 .logline .k{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.08em;color:var(--lunar)}
 .logline .n{color:var(--glow);font-size:12.5px;flex-basis:100%;font-family:var(--type);line-height:1.6}
 
+/* ── support ─────────────────────────────── */
+.sup{border-top:1px solid var(--edge);padding:88px 32px 104px;background:var(--night);position:relative;z-index:1}
+.sup.inapp{border-top:none;padding:0 0 40px}
+.sup-inner{max-width:640px;margin:0 auto}
+.sup h2{font-family:var(--type);font-size:34px;font-weight:400;line-height:1.22;margin:16px 0 22px;color:var(--lunar);text-wrap:balance}
+.sup-lead{font-size:15.5px;color:var(--dream);line-height:1.78;max-width:54ch}
+.sup-list{list-style:none;margin:36px 0 32px}
+.sup-list li{font-family:var(--type);font-size:16.5px;line-height:1.6;color:#ded8ec;padding:15px 0 15px 26px;position:relative;border-top:1px solid var(--edge)}
+.sup-list li::before{content:"";position:absolute;left:2px;top:24px;width:9px;height:1px;background:var(--gold)}
+.sup-cta{display:inline-block;font-family:var(--sans);font-size:11px;font-weight:600;letter-spacing:.18em;text-transform:uppercase;text-decoration:none;background:var(--dream);color:var(--night);border-radius:2px;padding:15px 28px;transition:background .25s}
+.sup-cta:hover{background:var(--pulse)}
+.sup-cta.off{background:var(--mist);color:var(--glow);cursor:not-allowed}
+.sup-small{font-size:12.5px;color:#4a4470;line-height:1.75;margin-top:26px;max-width:56ch}
+.footlink{background:none;border:none;font-family:var(--sans);font-size:11.5px;color:#4a4470;cursor:pointer;padding:0;text-decoration:underline;text-underline-offset:3px;transition:color .2s}
+.footlink:hover{color:var(--dream)}
+
 /* ── mall world ──────────────────────────── */
 .mw{border-top:1px solid var(--edge);padding:92px 32px 110px;background:var(--night);position:relative;z-index:1}
 .mw-inner{max-width:720px;margin:0 auto}
@@ -233,6 +249,9 @@ input[type=date]{width:100%;background:var(--night);border:1px solid var(--edge)
 
 var API = 'https://dualuse.tailb152cd.ts.net';
 var MAX_POST = 600, MAX_BIO = 160;
+
+// Paste the Ko-fi link here once the account exists. Empty = button reads "opening soon".
+var DONATE_URL = '';
 
 var me = null;            // signed-in user, or null
 var view = 'feed';        // feed | mall | profile
@@ -326,6 +345,29 @@ function mallWorld(inApp){
     + '</div></div></section>';
 }
 
+function support(inApp){
+  var open = !!DONATE_URL;
+  return '<section class="sup' + (inApp?' inapp':'') + '" id="support"><div class="sup-inner">'
+    + '<div class="eyebrow">Support</div>'
+    + '<h2>Lucid runs on a computer in a spare room.</h2>'
+    + '<p class="sup-lead">That is not a figure of speech. There is a machine in a house, and when the power '
+    + 'goes out, so does this. It costs very little to run right now, which is exactly why it is worth being '
+    + 'straight with you about where money would go.</p>'
+    + '<ul class="sup-list">'
+    + '<li>A domain, backups, and the electricity to keep it awake.</li>'
+    + '<li>A real server, for when the one in the spare room stops being enough.</li>'
+    + '<li>The Mall World map. Collecting the drawings, comparing them, building the thing.</li>'
+    + '<li>Staying ad-free. No advertising here, and your dreams are not for sale.</li>'
+    + '</ul>'
+    + (open
+        ? '<a class="sup-cta" href="' + esc(DONATE_URL) + '" target="_blank" rel="noopener noreferrer">Give something</a>'
+        : '<span class="sup-cta off">Opening soon</span>')
+    + '<p class="sup-small">Nothing here is behind a paywall and nothing will be. If you would rather not, or '
+    + 'cannot, post a dream instead. That is worth more to this place than money is.<br><br>'
+    + 'Lucid is a personal project, not a charity. Donations are not tax deductible.</p>'
+    + '</div></section>';
+}
+
 /* ── signed-out landing ──────────────────── */
 function landing(){
   var h = '<div class="wrap"><div class="hero">'
@@ -369,7 +411,7 @@ function landing(){
       + '</div></form>';
   }
 
-  h += '</div></div></div>' + mallWorld(false);
+  h += '</div></div></div>' + mallWorld(false) + support(false);
   return h;
 }
 
@@ -523,8 +565,12 @@ function render(){
   } else {
     var body = view === 'profile' ? profileView()
       : view === 'key' ? keyView()
-      : view === 'mall' ? mallWorld(true) : feedView();
-    app.innerHTML = '<div class="shell">' + topbar() + body + '</div>';
+      : view === 'mall' ? mallWorld(true)
+      : view === 'donate' ? support(true) : feedView();
+    app.innerHTML = '<div class="shell">' + topbar() + body
+      + (view === 'donate' ? ''
+         : '<p class="footnote" style="margin-top:44px"><button class="footlink" data-v="donate">Support Lucid</button></p>')
+      + '</div>';
   }
   flash = null;
   wire();
