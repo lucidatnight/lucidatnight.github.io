@@ -1,0 +1,737 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Lucid — Dream with ARIA</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;1,300;1,400&family=Inter:wght@300;400;500&display=swap');
+
+  :root {
+    --night:    #09090f;
+    --deep:     #0e0e1c;
+    --void:     #13132a;
+    --mist:     #1c1c3a;
+    --lunar:    #e8e4f0;
+    --dream:    #a89bc8;
+    --glow:     #7b6fa8;
+    --pulse:    #c4b5e8;
+    --gold:     #d4af6a;
+    --error:    #e07070;
+    --success:  #70b890;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--night);
+    color: var(--lunar);
+    font-family: 'Inter', sans-serif;
+    font-weight: 300;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* Stars background */
+  .stars {
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    z-index: 0;
+  }
+  .star {
+    position: absolute;
+    background: white;
+    border-radius: 50%;
+    animation: twinkle var(--d, 3s) ease-in-out infinite;
+    opacity: var(--o, 0.4);
+  }
+  @keyframes twinkle {
+    0%, 100% { opacity: var(--o, 0.4); }
+    50% { opacity: 0.1; }
+  }
+
+  /* Ambient glow */
+  .ambient {
+    position: fixed;
+    width: 600px;
+    height: 600px;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(123,111,168,0.12) 0%, transparent 70%);
+    top: -200px;
+    left: 50%;
+    transform: translateX(-50%);
+    pointer-events: none;
+    z-index: 0;
+    animation: breathe 8s ease-in-out infinite;
+  }
+  @keyframes breathe {
+    0%, 100% { transform: translateX(-50%) scale(1); opacity: 0.8; }
+    50% { transform: translateX(-50%) scale(1.15); opacity: 1; }
+  }
+
+  /* Layout */
+  .wrapper {
+    position: relative;
+    z-index: 1;
+    min-height: 100vh;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+  }
+
+  /* Left panel — hero */
+  .hero {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    padding: 80px 60px;
+    position: relative;
+  }
+
+  .wordmark {
+    font-family: 'Cormorant Garamond', serif;
+    font-weight: 300;
+    font-size: 14px;
+    letter-spacing: 0.4em;
+    text-transform: uppercase;
+    color: var(--dream);
+    margin-bottom: 80px;
+  }
+
+  .hero-title {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: clamp(52px, 6vw, 80px);
+    font-weight: 300;
+    line-height: 1.05;
+    color: var(--lunar);
+    margin-bottom: 28px;
+  }
+  .hero-title em {
+    font-style: italic;
+    color: var(--pulse);
+  }
+
+  .hero-body {
+    font-size: 15px;
+    line-height: 1.7;
+    color: var(--dream);
+    max-width: 380px;
+    margin-bottom: 60px;
+  }
+
+  .aria-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 18px;
+    border: 1px solid rgba(123,111,168,0.3);
+    border-radius: 100px;
+    font-size: 12px;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: var(--glow);
+  }
+  .aria-badge .dot {
+    width: 6px;
+    height: 6px;
+    background: var(--glow);
+    border-radius: 50%;
+    animation: pulse 2s ease-in-out infinite;
+  }
+  @keyframes pulse {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.4; transform: scale(0.7); }
+  }
+
+  .divider {
+    position: absolute;
+    right: 0;
+    top: 80px;
+    bottom: 80px;
+    width: 1px;
+    background: linear-gradient(to bottom, transparent, rgba(123,111,168,0.2) 30%, rgba(123,111,168,0.2) 70%, transparent);
+  }
+
+  /* Right panel — auth */
+  .auth-panel {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    padding: 80px 60px;
+    background: rgba(14,14,28,0.6);
+    backdrop-filter: blur(10px);
+  }
+
+  /* Tabs */
+  .tabs {
+    display: flex;
+    gap: 0;
+    margin-bottom: 44px;
+    border-bottom: 1px solid rgba(123,111,168,0.15);
+  }
+  .tab {
+    padding: 12px 0;
+    margin-right: 32px;
+    font-size: 13px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--glow);
+    cursor: pointer;
+    border-bottom: 2px solid transparent;
+    transition: all 0.2s;
+    background: none;
+    border-top: none;
+    border-left: none;
+    border-right: none;
+  }
+  .tab.active {
+    color: var(--lunar);
+    border-bottom-color: var(--pulse);
+  }
+  .tab:hover:not(.active) {
+    color: var(--dream);
+  }
+
+  /* Forms */
+  .form { display: none; flex-direction: column; gap: 20px; }
+  .form.active { display: flex; }
+
+  .field {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .field label {
+    font-size: 11px;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--glow);
+  }
+  .field input {
+    background: rgba(255,255,255,0.04);
+    border: 1px solid rgba(123,111,168,0.2);
+    border-radius: 8px;
+    padding: 14px 16px;
+    color: var(--lunar);
+    font-family: 'Inter', sans-serif;
+    font-size: 14px;
+    font-weight: 300;
+    outline: none;
+    transition: border-color 0.2s, background 0.2s;
+  }
+  .field input::placeholder { color: rgba(168,155,200,0.3); }
+  .field input:focus {
+    border-color: rgba(196,181,232,0.5);
+    background: rgba(255,255,255,0.06);
+  }
+  .field input.error { border-color: var(--error); }
+
+  .field-hint {
+    font-size: 11px;
+    color: rgba(168,155,200,0.5);
+    margin-top: -4px;
+  }
+
+  .msg {
+    font-size: 12px;
+    padding: 10px 14px;
+    border-radius: 6px;
+    display: none;
+  }
+  .msg.error { background: rgba(224,112,112,0.1); color: var(--error); border: 1px solid rgba(224,112,112,0.2); display: block; }
+  .msg.success { background: rgba(112,184,144,0.1); color: var(--success); border: 1px solid rgba(112,184,144,0.2); display: block; }
+
+  .btn {
+    padding: 15px 24px;
+    background: var(--glow);
+    border: none;
+    border-radius: 8px;
+    color: white;
+    font-family: 'Inter', sans-serif;
+    font-size: 13px;
+    font-weight: 500;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: background 0.2s, transform 0.1s;
+    margin-top: 4px;
+  }
+  .btn:hover { background: var(--pulse); }
+  .btn:active { transform: scale(0.99); }
+  .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+  /* Key reveal card */
+  .key-card {
+    display: none;
+    flex-direction: column;
+    gap: 20px;
+    animation: fadeUp 0.4s ease;
+  }
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(12px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  .key-card.visible { display: flex; }
+
+  .key-header {
+    font-size: 11px;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--success);
+  }
+
+  .key-box {
+    background: rgba(112,184,144,0.06);
+    border: 1px solid rgba(112,184,144,0.25);
+    border-radius: 10px;
+    padding: 24px;
+    text-align: center;
+  }
+  .key-label {
+    font-size: 11px;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--glow);
+    margin-bottom: 12px;
+  }
+  .key-value {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 36px;
+    font-weight: 300;
+    letter-spacing: 0.15em;
+    color: var(--gold);
+  }
+  .key-note {
+    font-size: 12px;
+    color: rgba(168,155,200,0.6);
+    line-height: 1.6;
+    margin-top: 8px;
+  }
+
+  .key-copy {
+    padding: 12px;
+    background: rgba(123,111,168,0.1);
+    border: 1px solid rgba(123,111,168,0.2);
+    border-radius: 8px;
+    color: var(--dream);
+    font-size: 13px;
+    cursor: pointer;
+    text-align: center;
+    transition: background 0.2s;
+  }
+  .key-copy:hover { background: rgba(123,111,168,0.2); }
+
+  .continue-btn {
+    padding: 15px 24px;
+    background: transparent;
+    border: 1px solid rgba(196,181,232,0.3);
+    border-radius: 8px;
+    color: var(--lunar);
+    font-family: 'Inter', sans-serif;
+    font-size: 13px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: all 0.2s;
+    text-align: center;
+  }
+  .continue-btn:hover {
+    background: rgba(196,181,232,0.08);
+    border-color: rgba(196,181,232,0.5);
+  }
+
+  /* Dashboard placeholder */
+  .dashboard {
+    display: none;
+    flex-direction: column;
+    gap: 24px;
+    animation: fadeUp 0.4s ease;
+  }
+  .dashboard.visible { display: flex; }
+  .dash-welcome {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 28px;
+    font-weight: 300;
+    color: var(--lunar);
+  }
+  .dash-welcome span { color: var(--pulse); font-style: italic; }
+  .dash-key-display {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 14px 18px;
+    background: rgba(212,175,106,0.06);
+    border: 1px solid rgba(212,175,106,0.2);
+    border-radius: 8px;
+  }
+  .dash-key-label { font-size: 11px; letter-spacing: 0.15em; text-transform: uppercase; color: var(--glow); }
+  .dash-key-val { font-family: 'Cormorant Garamond', serif; font-size: 22px; letter-spacing: 0.15em; color: var(--gold); }
+  .dash-modules {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+  }
+  .dash-module {
+    padding: 20px;
+    background: rgba(255,255,255,0.03);
+    border: 1px solid rgba(123,111,168,0.15);
+    border-radius: 10px;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .dash-module:hover {
+    background: rgba(123,111,168,0.08);
+    border-color: rgba(123,111,168,0.3);
+  }
+  .dash-module-title {
+    font-size: 13px;
+    color: var(--lunar);
+    margin-bottom: 4px;
+  }
+  .dash-module-sub {
+    font-size: 11px;
+    color: var(--glow);
+  }
+  .dash-module.coming {
+    opacity: 0.4;
+    cursor: default;
+  }
+  .dash-module.coming:hover {
+    background: rgba(255,255,255,0.03);
+    border-color: rgba(123,111,168,0.15);
+  }
+  .signout {
+    font-size: 12px;
+    color: rgba(168,155,200,0.4);
+    cursor: pointer;
+    text-align: center;
+    padding: 8px;
+    transition: color 0.2s;
+  }
+  .signout:hover { color: var(--dream); }
+
+  /* Moon decorative element */
+  .moon {
+    position: absolute;
+    bottom: 60px;
+    left: 60px;
+    width: 80px;
+    height: 80px;
+  }
+  .moon svg { width: 100%; height: 100%; opacity: 0.15; }
+
+  /* Responsive */
+  @media (max-width: 768px) {
+    .wrapper { grid-template-columns: 1fr; }
+    .hero { padding: 60px 32px 40px; }
+    .divider { display: none; }
+    .auth-panel { padding: 40px 32px 60px; }
+    .dash-modules { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<!-- Stars -->
+<div class="stars" id="stars"></div>
+<div class="ambient"></div>
+
+<div class="wrapper">
+
+  <!-- LEFT: Hero -->
+  <div class="hero">
+    <div class="wordmark">Lucid</div>
+
+    <h1 class="hero-title">
+      Enter the<br>
+      <em>dreaming</em><br>
+      mind.
+    </h1>
+
+    <p class="hero-body">
+      ARIA listens to your dreams — the symbols,
+      the feelings, the fragments that stay with you
+      after waking. Tell her what you saw. She knows
+      what the mind is trying to say.
+    </p>
+
+    <div class="aria-badge">
+      <span class="dot"></span>
+      Powered by ARIA
+    </div>
+
+    <div class="moon">
+      <svg viewBox="0 0 80 80" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M60 40C60 51.046 51.046 60 40 60C28.954 60 20 51.046 20 40C20 28.954 28.954 20 40 20C31.163 20 24 27.163 24 36C24 44.837 31.163 52 40 52C48.837 52 56 44.837 56 36C56 34.626 55.824 33.294 55.493 32.023C57.997 34.206 60 36.938 60 40Z" fill="white"/>
+      </svg>
+    </div>
+
+    <div class="divider"></div>
+  </div>
+
+  <!-- RIGHT: Auth -->
+  <div class="auth-panel" id="authPanel">
+
+    <!-- TABS -->
+    <div class="tabs" id="tabs">
+      <button class="tab active" onclick="switchTab('signup')">Create account</button>
+      <button class="tab" onclick="switchTab('signin')">Sign in</button>
+    </div>
+
+    <!-- SIGNUP FORM -->
+    <form class="form active" id="signupForm" onsubmit="handleSignup(event)">
+      <div id="signupMsg" class="msg"></div>
+
+      <div class="field">
+        <label>Username</label>
+        <input type="text" id="suUsername" placeholder="choose a username" autocomplete="username">
+      </div>
+      <div class="field">
+        <label>Email</label>
+        <input type="email" id="suEmail" placeholder="your@email.com" autocomplete="email">
+      </div>
+      <div class="field">
+        <label>Password</label>
+        <input type="password" id="suPassword" placeholder="at least 8 characters" autocomplete="new-password">
+        <span class="field-hint">Minimum 8 characters</span>
+      </div>
+
+      <button type="submit" class="btn" id="signupBtn">Begin dreaming</button>
+    </form>
+
+    <!-- KEY REVEAL -->
+    <div class="key-card" id="keyCard">
+      <div class="key-header">Account created</div>
+      <div class="key-box">
+        <div class="key-label">Your Lucid key</div>
+        <div class="key-value" id="keyDisplay"></div>
+        <div class="key-note">
+          This key is yours alone. No one else holds it.<br>
+          Save it somewhere safe — you may need it to recover your account.
+        </div>
+      </div>
+      <div class="key-copy" onclick="copyKey()">Copy key to clipboard</div>
+      <div class="continue-btn" onclick="enterDashboard()">Enter Lucid</div>
+    </div>
+
+    <!-- SIGNIN FORM -->
+    <form class="form" id="signinForm" onsubmit="handleSignin(event)">
+      <div id="signinMsg" class="msg"></div>
+
+      <div class="field">
+        <label>Email</label>
+        <input type="email" id="siEmail" placeholder="your@email.com" autocomplete="email">
+      </div>
+      <div class="field">
+        <label>Password</label>
+        <input type="password" id="siPassword" placeholder="your password" autocomplete="current-password">
+      </div>
+
+      <button type="submit" class="btn" id="signinBtn">Enter</button>
+    </form>
+
+    <!-- DASHBOARD -->
+    <div class="dashboard" id="dashboard">
+      <div class="dash-welcome">Welcome back, <span id="dashUsername"></span>.</div>
+
+      <div class="dash-key-display">
+        <div>
+          <div class="dash-key-label">Your key</div>
+          <div class="dash-key-val" id="dashKey"></div>
+        </div>
+      </div>
+
+      <div class="dash-modules">
+        <div class="dash-module">
+          <div class="dash-module-title">Tell ARIA a dream</div>
+          <div class="dash-module-sub">Start interpreting</div>
+        </div>
+        <div class="dash-module">
+          <div class="dash-module-title">Dream journal</div>
+          <div class="dash-module-sub">Your history</div>
+        </div>
+        <div class="dash-module coming">
+          <div class="dash-module-title">Lucid training</div>
+          <div class="dash-module-sub">Coming soon</div>
+        </div>
+        <div class="dash-module coming">
+          <div class="dash-module-title">Patterns</div>
+          <div class="dash-module-sub">Coming soon</div>
+        </div>
+      </div>
+
+      <div class="signout" onclick="signOut()">Sign out</div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+  // ── Stars ──────────────────────────────────────────
+  const starsEl = document.getElementById('stars');
+  for (let i = 0; i < 120; i++) {
+    const s = document.createElement('div');
+    s.className = 'star';
+    const size = Math.random() * 2 + 0.5;
+    s.style.cssText = `
+      width:${size}px; height:${size}px;
+      top:${Math.random()*100}%;
+      left:${Math.random()*100}%;
+      --d:${2+Math.random()*4}s;
+      --o:${0.2+Math.random()*0.5};
+      animation-delay:${Math.random()*4}s;
+    `;
+    starsEl.appendChild(s);
+  }
+
+  // ── Key generation ─────────────────────────────────
+  function generateKey() {
+    const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+    let key = 'LUC-';
+    for (let i = 0; i < 6; i++) {
+      key += chars[Math.floor(Math.random() * chars.length)];
+    }
+    return key;
+  }
+
+  // ── Simple in-memory user store (localStorage) ─────
+  function getUsers() {
+    return JSON.parse(localStorage.getItem('lucid_users') || '{}');
+  }
+  function saveUsers(u) {
+    localStorage.setItem('lucid_users', JSON.stringify(u));
+  }
+  function setSession(email) {
+    localStorage.setItem('lucid_session', email);
+  }
+  function getSession() {
+    return localStorage.getItem('lucid_session');
+  }
+  function clearSession() {
+    localStorage.removeItem('lucid_session');
+  }
+
+  // ── Tab switching ──────────────────────────────────
+  function switchTab(tab) {
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.form').forEach(f => f.classList.remove('active'));
+    document.getElementById('keyCard').classList.remove('visible');
+    document.getElementById('dashboard').classList.remove('visible');
+
+    if (tab === 'signup') {
+      document.querySelectorAll('.tab')[0].classList.add('active');
+      document.getElementById('signupForm').classList.add('active');
+    } else {
+      document.querySelectorAll('.tab')[1].classList.add('active');
+      document.getElementById('signinForm').classList.add('active');
+    }
+    document.getElementById('tabs').style.display = 'flex';
+  }
+
+  // ── Signup ─────────────────────────────────────────
+  function handleSignup(e) {
+    e.preventDefault();
+    const username = document.getElementById('suUsername').value.trim();
+    const email = document.getElementById('suEmail').value.trim().toLowerCase();
+    const password = document.getElementById('suPassword').value;
+    const msg = document.getElementById('signupMsg');
+
+    msg.className = 'msg';
+    msg.style.display = 'none';
+
+    if (!username) { showMsg('signupMsg', 'error', 'Please choose a username.'); return; }
+    if (!email || !email.includes('@')) { showMsg('signupMsg', 'error', 'Please enter a valid email.'); return; }
+    if (password.length < 8) { showMsg('signupMsg', 'error', 'Password must be at least 8 characters.'); return; }
+
+    const users = getUsers();
+    if (users[email]) { showMsg('signupMsg', 'error', 'An account with this email already exists.'); return; }
+
+    // Check username taken
+    const taken = Object.values(users).some(u => u.username.toLowerCase() === username.toLowerCase());
+    if (taken) { showMsg('signupMsg', 'error', 'That username is already taken.'); return; }
+
+    const key = generateKey();
+    users[email] = { username, email, password, key, created: Date.now() };
+    saveUsers(users);
+    setSession(email);
+
+    // Show key reveal
+    document.getElementById('signupForm').classList.remove('active');
+    document.getElementById('tabs').style.display = 'none';
+    document.getElementById('keyDisplay').textContent = key;
+    document.getElementById('keyCard').classList.add('visible');
+  }
+
+  // ── Signin ─────────────────────────────────────────
+  function handleSignin(e) {
+    e.preventDefault();
+    const email = document.getElementById('siEmail').value.trim().toLowerCase();
+    const password = document.getElementById('siPassword').value;
+
+    const users = getUsers();
+    const user = users[email];
+
+    if (!user || user.password !== password) {
+      showMsg('signinMsg', 'error', 'Email or password is incorrect.');
+      return;
+    }
+
+    setSession(email);
+    showDashboard(user);
+  }
+
+  // ── Dashboard ──────────────────────────────────────
+  function enterDashboard() {
+    const email = getSession();
+    const users = getUsers();
+    const user = users[email];
+    document.getElementById('keyCard').classList.remove('visible');
+    showDashboard(user);
+  }
+
+  function showDashboard(user) {
+    document.getElementById('tabs').style.display = 'none';
+    document.querySelectorAll('.form').forEach(f => f.classList.remove('active'));
+    document.getElementById('keyCard').classList.remove('visible');
+    document.getElementById('signinForm').classList.remove('active');
+    document.getElementById('dashUsername').textContent = user.username;
+    document.getElementById('dashKey').textContent = user.key;
+    document.getElementById('dashboard').classList.add('visible');
+  }
+
+  function signOut() {
+    clearSession();
+    document.getElementById('dashboard').classList.remove('visible');
+    document.getElementById('tabs').style.display = 'flex';
+    switchTab('signin');
+  }
+
+  // ── Copy key ───────────────────────────────────────
+  function copyKey() {
+    const key = document.getElementById('keyDisplay').textContent;
+    navigator.clipboard.writeText(key).then(() => {
+      const btn = document.querySelector('.key-copy');
+      btn.textContent = 'Copied!';
+      setTimeout(() => btn.textContent = 'Copy key to clipboard', 2000);
+    });
+  }
+
+  // ── Utility ────────────────────────────────────────
+  function showMsg(id, type, text) {
+    const el = document.getElementById(id);
+    el.className = 'msg ' + type;
+    el.textContent = text;
+    el.style.display = 'block';
+  }
+
+  // ── Auto login if session exists ───────────────────
+  window.addEventListener('load', () => {
+    const email = getSession();
+    if (email) {
+      const users = getUsers();
+      if (users[email]) showDashboard(users[email]);
+    }
+  });
+</script>
+</body>
+</html>
