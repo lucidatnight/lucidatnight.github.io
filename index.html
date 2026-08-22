@@ -183,6 +183,9 @@ input[type=date]{width:100%;background:var(--night);border:1px solid var(--edge)
 .sup-cta:hover{background:var(--pulse)}
 .sup-cta.off{background:var(--mist);color:var(--glow);cursor:not-allowed}
 .sup-small{font-size:12.5px;color:#4a4470;line-height:1.75;margin-top:26px;max-width:56ch}
+.file-in{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap;border:0}
+label.ghost{display:inline-block}
+.file-in:focus-visible + label.ghost{outline:1px solid var(--pulse);outline-offset:3px}
 .footlink{background:none;border:none;font-family:var(--sans);font-size:11.5px;color:#4a4470;cursor:pointer;padding:0;text-decoration:underline;text-underline-offset:3px;transition:color .2s}
 .footlink:hover{color:var(--dream)}
 
@@ -468,10 +471,11 @@ function profileView(){
     h += '<div class="sectitle">Your details</div><div class="card"><div class="stack">'
       + '<div><label class="fl" for="bioIn">Bio</label>'
       + '<textarea id="bioIn" maxlength="' + MAX_BIO + '" style="min-height:76px" placeholder="A sentence about how you dream.">' + esc(u.bio||'') + '</textarea></div>'
-      + '<div class="row"><button class="ghost" id="avBtn">Choose avatar</button>'
+      + '<div class="row">'
+      + '<input type="file" id="avFile" class="file-in" accept="image/*,.heic,.heif">'
+      + '<label class="ghost" for="avFile">Choose avatar</label>'
       + (u.avatar ? '<button class="ghost" id="avClear">Remove</button>' : '')
       + '<span class="hint" id="avName">Saved as soon as you pick it. Cropped square and shrunk to 128px on your device first.</span></div>'
-      + '<input type="file" id="avFile" accept="image/*" hidden>'
       + '<div><button class="btn" id="saveProfile">Save bio</button></div></div></div>'
 
       + '<div class="sectitle">Your Lucid key</div><div class="keybox">'
@@ -676,9 +680,8 @@ function wire(){
     kc.textContent = 'Copied'; setTimeout(function(){ kc.textContent = 'Copy'; }, 1600);
   };
 
-  var avBtn = $('avBtn'), avFile = $('avFile'), avName = $('avName');
-  if (avBtn && avFile){
-    avBtn.onclick = function(){ avFile.click(); };
+  var avFile = $('avFile'), avName = $('avName');
+  if (avFile){
     avFile.onchange = function(){
       var f = avFile.files && avFile.files[0];
       if (!f) return;
