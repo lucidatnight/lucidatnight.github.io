@@ -266,16 +266,34 @@ var pendingKey = null;    // shown once after signup
 var pendingUser = null;   // held back until the key is acknowledged
 
 /* ── api ─────────────────────────────────── */
+// The site and the API live on different domains, and Safari blocks
+// cross-site cookies outright. So the session travels as a bearer token
+// instead, which no browser interferes with.
+function token(){ try { return localStorage.getItem('lucid_token'); } catch(e){ return null; } }
+function setToken(t){
+  try { t ? localStorage.setItem('lucid_token', t) : localStorage.removeItem('lucid_token'); } catch(e){}
+}
+
 function api(path, opts){
   opts = opts || {};
+  var headers = {};
+  if (opts.body) headers['Content-Type'] = 'application/json';
+  var t = token();
+  if (t) headers['Authorization'] = 'Bearer ' + t;
   return fetch(API + path, {
     method: opts.method || 'GET',
     credentials: 'include',
-    headers: opts.body ? { 'Content-Type': 'application/json' } : undefined,
+    headers: headers,
     body: opts.body ? JSON.stringify(opts.body) : undefined
   }).then(function(r){
     offline(false);
     return r.json().catch(function(){ return {}; }).then(function(data){
+      if (r.status === 401 && token()){
+        // The token is dead. Do not leave a signed-out person looking at a
+        // signed-in page — that was the whole confusion.
+        setToken(null); me = null;
+        if (path !== '/api/me') { render(); }
+      }
       if (!r.ok) throw new Error(data.error || 'Something went wrong.');
       return data;
     });
@@ -597,6 +615,7 @@ function wire(){
       password: $('suPassword').value
     }}).then(function(d){
       // Hold the user back so the key screen (part of the signed-out view) can show.
+      setToken(d.token);
       pendingUser = d.user; pendingKey = d.user.lucidKey; render(); loadStats();
     }).catch(function(err){
       flash = { t:'err', m: err.message === 'offline'
@@ -611,7 +630,7 @@ function wire(){
     var btn = $('siBtn'); btn.disabled = true; btn.textContent = 'Entering';
     api('/api/signin', { method:'POST', body:{
       email: $('siEmail').value.trim(), password: $('siPassword').value
-    }}).then(function(d){ me = d.user; view = 'feed'; loadFeed(); })
+    }}).then(function(d){ setToken(d.token); me = d.user; view = 'feed'; loadFeed(); })
       .catch(function(err){
         flash = { t:'err', m: err.message === 'offline'
           ? 'Cannot reach Lucid right now. Try again shortly.' : err.message };
@@ -773,6 +792,7 @@ function wire(){
   function doSignout(){
     api('/api/signout', { method:'POST' }).catch(function(){})
       .then(function(){
+        setToken(null);
         me = null; view = 'feed'; viewing = null;
         cache = { posts:[], profile:null, encounters:null };
         render(); loadStats();
