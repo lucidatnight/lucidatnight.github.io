@@ -470,9 +470,9 @@ function profileView(){
       + '<textarea id="bioIn" maxlength="' + MAX_BIO + '" style="min-height:76px" placeholder="A sentence about how you dream.">' + esc(u.bio||'') + '</textarea></div>'
       + '<div class="row"><button class="ghost" id="avBtn">Choose avatar</button>'
       + (u.avatar ? '<button class="ghost" id="avClear">Remove</button>' : '')
-      + '<span class="hint" id="avName">Resized to 128px on your device before it is sent</span></div>'
+      + '<span class="hint" id="avName">Saved as soon as you pick it. Cropped square and shrunk to 128px on your device first.</span></div>'
       + '<input type="file" id="avFile" accept="image/*" hidden>'
-      + '<div><button class="btn" id="saveProfile">Save profile</button></div></div></div>'
+      + '<div><button class="btn" id="saveProfile">Save bio</button></div></div></div>'
 
       + '<div class="sectitle">Your Lucid key</div><div class="keybox">'
       + '<span class="private">&#9679; Only you can see this</span>'
@@ -682,35 +682,68 @@ function wire(){
     avFile.onchange = function(){
       var f = avFile.files && avFile.files[0];
       if (!f) return;
+      avName.style.color = '';
+      avName.textContent = 'Reading\u2026';
       var img = new Image(), url = URL.createObjectURL(f);
+
       img.onload = function(){
         var c = document.createElement('canvas'), S = 128;
         c.width = S; c.height = S;
         var g = c.getContext('2d'), side = Math.min(img.width, img.height);
         // Re-drawing through a canvas also drops every EXIF tag, GPS included.
         g.drawImage(img, (img.width-side)/2, (img.height-side)/2, side, side, 0, 0, S, S);
-        avFile.dataURL = c.toDataURL('image/jpeg', 0.82);
+        var data = c.toDataURL('image/jpeg', 0.82);
         URL.revokeObjectURL(url);
-        avName.textContent = 'Ready. Press Save profile.';
+
+        // Show it straight away so there is no doubt it took, then save it.
+        // No second button to press: every other site works this way.
+        var shown = document.querySelector('.phead .av');
+        if (shown) shown.innerHTML = '<img src="' + data + '" alt="">';
+        avName.textContent = 'Saving\u2026';
+
+        api('/api/me', { method:'PATCH', body:{ avatar: data }})
+          .then(function(d){
+            me = d.user;
+            // Flash after the reload, not before — openProfile renders twice
+            // and the first render would eat the message.
+            openProfile(me.handle).then(function(){
+              flash = { t:'ok', m:'Avatar saved.' }; render();
+            });
+          })
+          .catch(function(err){
+            flash = { t:'err', m: err.message === 'offline'
+              ? 'Could not reach Lucid, so the picture was not saved. Try again in a moment.'
+              : err.message };
+            openProfile(me.handle);
+          });
       };
-      img.onerror = function(){ avName.textContent = 'That file did not look like an image.'; };
+
+      img.onerror = function(){
+        URL.revokeObjectURL(url);
+        avName.style.color = 'var(--error)';
+        avName.textContent = 'That image could not be read. iPhone photos are often HEIC, which browsers cannot open — take a screenshot of it and use that, or export as JPEG.';
+      };
       img.src = url;
     };
   }
   var avClear = $('avClear');
   if (avClear) avClear.onclick = function(){
     api('/api/me', { method:'PATCH', body:{ avatar:null }})
-      .then(function(d){ me = d.user; flash = { t:'ok', m:'Avatar removed.' }; openProfile(me.handle); })
+      .then(function(d){
+        me = d.user;
+        openProfile(me.handle).then(function(){ flash = { t:'ok', m:'Avatar removed.' }; render(); });
+      })
       .catch(function(err){ flash = { t:'err', m: err.message }; render(); });
   };
 
   var sp = $('saveProfile');
   if (sp) sp.onclick = function(){
-    var payload = { bio: ($('bioIn') || {}).value || '' };
-    if (avFile && avFile.dataURL) payload.avatar = avFile.dataURL;
     sp.disabled = true; sp.textContent = 'Saving';
-    api('/api/me', { method:'PATCH', body: payload })
-      .then(function(d){ me = d.user; flash = { t:'ok', m:'Profile saved.' }; openProfile(me.handle); })
+    api('/api/me', { method:'PATCH', body: { bio: ($('bioIn') || {}).value || '' } })
+      .then(function(d){
+        me = d.user;
+        openProfile(me.handle).then(function(){ flash = { t:'ok', m:'Bio saved.' }; render(); });
+      })
       .catch(function(err){ flash = { t:'err', m: err.message }; render(); });
   };
 
