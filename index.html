@@ -155,6 +155,20 @@ button:focus-visible,a:focus-visible,input:focus-visible,textarea:focus-visible{
 .sectitle{font-family:var(--type);font-size:14px;letter-spacing:.2em;text-transform:uppercase;color:var(--glow);margin:38px 0 6px}
 .footnote{margin-top:56px;padding-top:24px;border-top:1px solid var(--edge);font-size:11.5px;color:#4a4470;line-height:1.7}
 
+/* ── profile header actions ──────────────── */
+.av-edit{position:relative;display:inline-block;cursor:pointer;border-radius:50%}
+.av-edit .cap{
+  position:absolute;inset:0;border-radius:50%;display:grid;place-items:center;
+  background:rgba(0,0,0,.62);color:var(--lunar);font-family:var(--sans);
+  font-size:9px;font-weight:600;letter-spacing:.16em;text-transform:uppercase;
+  opacity:0;transition:opacity .22s;
+}
+.av-edit:hover .cap,.av-edit:focus-within .cap{opacity:1}
+.pactions{display:flex;gap:10px;margin-top:14px;flex-wrap:wrap}
+.tiny{font-family:var(--sans);font-size:10px;font-weight:500;letter-spacing:.14em;text-transform:uppercase;background:none;border:1px solid var(--edge);color:var(--glow);border-radius:2px;padding:8px 14px;cursor:pointer;transition:border-color .22s,color .22s}
+.tiny:hover{border-color:var(--glow);color:var(--pulse)}
+.pbio.none{color:#4a4470}
+
 /* ── the key tab ─────────────────────────── */
 .kw h2{font-family:var(--type);font-size:33px;font-weight:400;line-height:1.22;margin:14px 0 20px;color:var(--lunar);text-wrap:balance}
 .kw-lead{font-size:15.5px;color:var(--dream);line-height:1.75;max-width:56ch}
@@ -477,33 +491,31 @@ function profileView(){
   var d = cache.profile;
   if (!d) return '<div class="empty">Loading&hellip;</div>';
   var u = d.user, own = u.handle === me.handle;
+  var pic = own
+    ? '<input type="file" id="avFile" class="file-in" accept="image/*,.heic,.heif">'
+      + '<label class="av-edit" for="avFile" title="Change your picture">'
+      + avatar(u.handle, u.avatar, 'l') + '<span class="cap">Change</span></label>'
+    : avatar(u.handle, u.avatar, 'l');
+
   var h = flashHTML()
-    + '<div class="phead">' + avatar(u.handle, u.avatar, 'l') + '<div style="flex:1;min-width:0">'
+    + '<div class="phead">' + pic + '<div style="flex:1;min-width:0">'
     + '<div class="pname">' + esc(u.handle) + '</div>'
     + '<div class="pmeta">Dreaming since ' + esc(joined(u.joined)) + ' &middot; '
     + d.postCount + (d.postCount === 1 ? ' dream' : ' dreams') + '</div>'
-    + (u.bio ? '<div class="pbio">' + esc(u.bio) + '</div>' : '')
+    + (u.bio ? '<div class="pbio">' + esc(u.bio) + '</div>'
+             : (own ? '<div class="pbio none">No bio yet.</div>' : ''))
+    + (own ? '<div class="pactions"><button class="tiny" data-v="settings">Settings</button>'
+             + '<span class="hint" id="avName">Click your picture to change it</span></div>' : '')
     + '</div></div>';
 
   if (own){
-    h += '<div class="sectitle">Your details</div><div class="card"><div class="stack">'
-      + '<div><label class="fl" for="bioIn">Bio</label>'
-      + '<textarea id="bioIn" maxlength="' + MAX_BIO + '" style="min-height:76px" placeholder="A sentence about how you dream.">' + esc(u.bio||'') + '</textarea></div>'
-      + '<div class="row">'
-      + '<input type="file" id="avFile" class="file-in" accept="image/*,.heic,.heif">'
-      + '<label class="ghost" for="avFile">Choose avatar</label>'
-      + (u.avatar ? '<button class="ghost" id="avClear">Remove</button>' : '')
-      + '<span class="hint" id="avName">Saved as soon as you pick it. Cropped square and shrunk to 128px on your device first.</span></div>'
-      + '<div><button class="btn" id="saveProfile">Save bio</button></div></div></div>'
-
-      + '<div class="sectitle">Your Lucid key</div><div class="keybox">'
+    h += '<div class="sectitle">Your Lucid key</div><div class="keybox">'
       + '<span class="private">&#9679; Only you can see this</span>'
       + '<div class="keyval blur" id="keyv">' + esc(me.lucidKey || '') + '</div>'
       + '<div class="row"><button class="ghost" id="keyReveal">Reveal</button>'
       + '<button class="ghost" id="keyCopy">Copy</button></div>'
       + '<p class="hint" style="margin-top:14px">Nobody else can see this, including from a public profile page. '
-      + 'The server only ever sends it to you.</p></div>'
-      + '<div style="margin-top:34px"><button class="ghost" id="signout">Sign out</button></div>';
+      + 'The server only ever sends it to you.</p></div>';
   }
 
   h += '<div class="sectitle">' + (own ? 'Your dreams' : 'Dreams') + '</div>';
@@ -579,6 +591,34 @@ function keyView(){
   return h;
 }
 
+function settingsView(){
+  return flashHTML()
+    + '<div class="eyebrow">Settings</div>'
+    + '<h2 style="font-family:var(--type);font-size:31px;font-weight:400;margin:14px 0 26px;color:var(--lunar)">Your account.</h2>'
+
+    + '<div class="sectitle" style="margin-top:0">Bio</div>'
+    + '<div class="card"><div class="stack">'
+    + '<div><textarea id="bioIn" maxlength="' + MAX_BIO + '" style="min-height:88px" placeholder="A sentence about how you dream.">' + esc(me.bio || '') + '</textarea>'
+    + '<p class="hint" style="margin-top:9px">Up to ' + MAX_BIO + ' characters. Shown on your profile to anyone who visits it.</p></div>'
+    + '<div><button class="btn" id="saveProfile">Save bio</button></div>'
+    + '</div></div>'
+
+    + '<div class="sectitle">Picture</div>'
+    + '<div class="card"><div class="row">'
+    + '<input type="file" id="avFile" class="file-in" accept="image/*,.heic,.heif">'
+    + '<label class="ghost" for="avFile">Choose picture</label>'
+    + (me.avatar ? '<button class="ghost" id="avClear">Remove</button>' : '')
+    + '<span class="hint" id="avName">Saved as soon as you pick it. Cropped square and shrunk to 128px on your device first.</span>'
+    + '</div></div>'
+
+    + '<div class="sectitle">Account</div>'
+    + '<div class="card"><div class="stack">'
+    + '<div class="hint">Signed in as <b style="color:var(--lunar);font-weight:500">' + esc(me.handle) + '</b>'
+    + (me.email ? ' &middot; ' + esc(me.email) : '') + '</div>'
+    + '<div><button class="ghost" id="signout">Sign out</button></div>'
+    + '</div></div>';
+}
+
 /* ── render ──────────────────────────────── */
 function render(){
   var app = document.getElementById('app');
@@ -588,7 +628,8 @@ function render(){
     var body = view === 'profile' ? profileView()
       : view === 'key' ? keyView()
       : view === 'mall' ? mallWorld(true)
-      : view === 'donate' ? support(true) : feedView();
+      : view === 'donate' ? support(true)
+      : view === 'settings' ? settingsView() : feedView();
     app.innerHTML = '<div class="shell">' + topbar() + body
       + (view === 'donate' ? ''
          : '<p class="footnote" style="margin-top:44px"><button class="footlink" data-v="donate">Support Lucid</button></p>')
@@ -650,6 +691,7 @@ function wire(){
       if (v === 'profile') return openProfile(me.handle);
       if (v === 'feed') return loadFeed();
       if (v === 'key') return loadEncounters();
+      if (v === 'settings'){ view = 'settings'; render(); window.scrollTo(0,0); return; }
       view = v; render();
     };
   });
@@ -728,8 +770,9 @@ function wire(){
             me = d.user;
             // Flash after the reload, not before — openProfile renders twice
             // and the first render would eat the message.
-            openProfile(me.handle).then(function(){
-              flash = { t:'ok', m:'Avatar saved.' }; render();
+            if (view === 'settings'){ flash = { t:'ok', m:'Picture saved.' }; render(); }
+            else openProfile(me.handle).then(function(){
+              flash = { t:'ok', m:'Picture saved.' }; render();
             });
           })
           .catch(function(err){
@@ -753,7 +796,7 @@ function wire(){
     api('/api/me', { method:'PATCH', body:{ avatar:null }})
       .then(function(d){
         me = d.user;
-        openProfile(me.handle).then(function(){ flash = { t:'ok', m:'Avatar removed.' }; render(); });
+        flash = { t:'ok', m:'Picture removed.' }; render();
       })
       .catch(function(err){ flash = { t:'err', m: err.message }; render(); });
   };
@@ -764,7 +807,7 @@ function wire(){
     api('/api/me', { method:'PATCH', body: { bio: ($('bioIn') || {}).value || '' } })
       .then(function(d){
         me = d.user;
-        openProfile(me.handle).then(function(){ flash = { t:'ok', m:'Bio saved.' }; render(); });
+        flash = { t:'ok', m:'Bio saved.' }; render();
       })
       .catch(function(err){ flash = { t:'err', m: err.message }; render(); });
   };
