@@ -20,6 +20,13 @@
 <meta name="twitter:description" content="Write down what you saw, before it goes. A shared feed of dreams, and an open question about the mall thousands of people keep waking up in.">
 <meta name="twitter:image" content="https://lucidatnight.github.io/preview.png">
 <meta name="theme-color" content="#000000">
+<link rel="manifest" href="/manifest.json">
+<link rel="apple-touch-icon" href="/icon-180.png">
+<link rel="icon" type="image/png" sizes="192x192" href="/icon-192.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Lucid">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap">
@@ -155,6 +162,64 @@ button:focus-visible,a:focus-visible,input:focus-visible,textarea:focus-visible{
 .sectitle{font-family:var(--type);font-size:14px;letter-spacing:.2em;text-transform:uppercase;color:var(--glow);margin:38px 0 6px}
 .footnote{margin-top:56px;padding-top:24px;border-top:1px solid var(--edge);font-size:11.5px;color:#4a4470;line-height:1.7}
 
+/* ── reactions ───────────────────────────── */
+.reacts{display:flex;gap:6px;margin-top:14px;flex-wrap:wrap}
+.react{
+  font-family:var(--sans);font-size:10px;font-weight:500;letter-spacing:.12em;
+  text-transform:uppercase;background:none;border:1px solid var(--edge);
+  color:#5c5686;border-radius:99px;padding:6px 12px;cursor:pointer;
+  transition:border-color .2s,color .2s,background .2s;
+  display:inline-flex;align-items:center;gap:7px;white-space:nowrap;
+}
+.react:hover{border-color:var(--glow);color:var(--dream)}
+.react.on{border-color:rgba(212,175,106,.45);color:var(--gold);background:rgba(212,175,106,.07)}
+.react b{font-weight:600;font-variant-numeric:tabular-nums}
+.react.readonly{cursor:default}
+.react.readonly:hover{border-color:var(--edge);color:#5c5686}
+
+/* ── patterns ────────────────────────────── */
+.pat{border:1px solid var(--edge);border-radius:3px;background:var(--deep);padding:26px}
+.pat-line{
+  font-family:var(--type);font-size:17px;line-height:1.65;color:#ded8ec;
+  padding:13px 0;border-top:1px solid var(--edge);
+}
+.pat-line:first-of-type{border-top:none;padding-top:0}
+.pat-line b{color:var(--gold);font-weight:400}
+.pat-note{font-size:12px;color:#4a4470;line-height:1.7;margin-top:18px}
+.pat-empty{font-family:var(--type);font-size:16px;color:var(--glow);line-height:1.7}
+
+/* ── visitor bar ─────────────────────────── */
+.visitor{
+  background:var(--deep);border:1px solid var(--edge);border-left:2px solid var(--dream);
+  border-radius:2px;padding:18px 22px;display:flex;align-items:center;
+  justify-content:space-between;gap:18px;flex-wrap:wrap;
+}
+.visitor p{font-size:14px;color:var(--dream);line-height:1.65;margin:0}
+.statline{
+  font-size:11.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--glow);
+  padding:14px 0 0;font-variant-numeric:tabular-nums;
+}
+.statline b{color:var(--pulse);font-weight:600}
+.readfeed{
+  display:inline-flex;align-items:center;gap:9px;align-self:flex-start;margin-top:26px;
+  font-family:var(--sans);font-size:11px;font-weight:500;letter-spacing:.14em;
+  text-transform:uppercase;background:none;border:none;color:var(--dream);
+  cursor:pointer;padding:0;transition:color .2s;
+}
+.readfeed:hover{color:var(--pulse)}
+.readfeed span{font-size:14px}
+
+/* ── add to home screen ──────────────────── */
+#a2hs{
+  position:fixed;left:14px;right:14px;bottom:14px;z-index:60;
+  background:var(--deep);border:1px solid var(--edge);border-radius:4px;
+  padding:15px 17px;display:none;gap:14px;align-items:flex-start;
+}
+#a2hs.show{display:flex}
+#a2hs p{font-size:13px;color:var(--dream);line-height:1.6;flex:1;margin:0}
+#a2hs b{color:var(--lunar);font-weight:500}
+#a2hs button{background:none;border:none;color:var(--glow);font-size:18px;cursor:pointer;line-height:1;padding:0 2px}
+
 /* ── profile header actions ──────────────── */
 .av-edit{position:relative;display:inline-block;cursor:pointer;border-radius:50%}
 .av-edit .cap{
@@ -259,6 +324,7 @@ label.ghost{display:inline-block}
     feeling. If you have been there, draw it.</p>
 </div></section></div>
 <div id="counter" aria-live="polite"></div>
+<div id="a2hs"><p><b>Keep Lucid on your home screen.</b> Tap Share, then Add to Home Screen. It opens straight to the box you write in.</p><button id="a2hsX" aria-label="Dismiss">&times;</button></div>
 
 <script>
 (function(){
@@ -271,7 +337,7 @@ var MAX_POST = 600, MAX_BIO = 160;
 var DONATE_URL = '';
 
 var me = null;            // signed-in user, or null
-var view = 'feed';        // feed | mall | profile
+var view = 'landing';     // landing | feed | mall | key | profile | settings | donate
 var viewing = null;       // handle being looked at
 var flash = null;         // {t:'err'|'ok', m:string}
 var cache = { posts: [], profile: null, encounters: null };
@@ -342,6 +408,22 @@ function avatar(handle, url, size){
   if (url) return '<div class="'+cls+'"><img src="'+esc(url)+'" alt=""></div>';
   return '<div class="'+cls+'" aria-hidden="true">'+esc(String(handle||'?').charAt(0).toUpperCase())+'</div>';
 }
+var REACTS = [
+  ['same',   'Same',       'I have had this dream'],
+  ['place',  'That place', 'I know where that is'],
+  ['chills', 'Chills',     'That got me']
+];
+function reactBar(p){
+  var mine = p.mine || [], counts = p.reactions || {};
+  var h = '<div class="reacts">';
+  REACTS.forEach(function(r){
+    var n = counts[r[0]] || 0, on = mine.indexOf(r[0]) !== -1;
+    h += '<button class="react' + (on ? ' on' : '') + (me ? '' : ' readonly')
+      + '" data-react="' + p.id + ':' + r[0] + '" title="' + esc(r[2]) + '">'
+      + esc(r[1]) + (n ? ' <b>' + n + '</b>' : '') + '</button>';
+  });
+  return h + '</div>';
+}
 function flashHTML(){
   if (!flash) return '';
   var h = '<div class="msg '+flash.t+'">'+esc(flash.m)+'</div>';
@@ -411,6 +493,7 @@ function landing(){
     + '<p>Write it down before it goes. The symbols, the feelings, the fragments that stay with you after '
     + 'waking, kept somewhere they will not dissolve by lunchtime.</p>'
     + '<div class="badge"><span class="dot"></span>Early access</div>'
+    + '<button class="readfeed" data-v="feed">Read what people are dreaming <span>&rarr;</span></button>'
     + '<div class="moon">' + moonSVG() + '</div>'
     + '</div><div class="authpanel"><div class="authinner">';
 
@@ -452,34 +535,48 @@ function landing(){
 
 /* ── signed-in app ───────────────────────── */
 function topbar(){
-  return '<div class="topbar"><div class="wordmark">Lucid<span class="d">.</span></div><nav class="nav">'
-    + '<button data-v="feed" class="' + (view==='feed'?'on':'') + '">Feed</button>'
-    + '<button data-v="key" class="' + (view==='key'?'on':'') + '">Your Key</button>'
-    + '<button data-v="mall" class="' + (view==='mall'?'on':'') + '">Mall World</button>'
-    + '<button data-v="profile" class="' + (view==='profile'&&!viewing?'on':'') + '">' + esc(me.handle) + '</button>'
-    + '<button id="topSignout" title="Sign out" aria-label="Sign out">Sign out</button>'
-    + '</nav></div>';
+  var h = '<div class="topbar"><div class="wordmark">Lucid<span class="d">.</span></div><nav class="nav">'
+    + '<button data-v="feed" class="' + (view==='feed'?'on':'') + '">Feed</button>';
+  if (me) h += '<button data-v="key" class="' + (view==='key'?'on':'') + '">Your Key</button>';
+  h += '<button data-v="mall" class="' + (view==='mall'?'on':'') + '">Mall World</button>';
+  h += me
+    ? '<button data-v="profile" class="' + (view==='profile'&&!viewing?'on':'') + '">' + esc(me.handle) + '</button>'
+      + '<button id="topSignout" title="Sign out" aria-label="Sign out">Sign out</button>'
+    : '<button data-v="landing" class="on">Sign in</button>';
+  return h + '</nav></div>';
 }
 
 function feedView(){
-  var h = flashHTML()
-    + '<div class="card composer"><label class="fl" for="composer">What did you see?</label>'
-    + '<textarea id="composer" maxlength="' + MAX_POST + '" placeholder="I was standing in a house I have never lived in&hellip;"></textarea>'
-    + '<div class="spread" style="margin-top:16px"><span class="count" id="count">0 / ' + MAX_POST + '</span>'
-    + '<button class="btn" id="postBtn" disabled>Post dream</button></div></div>';
+  var h = flashHTML();
+
+  if (!me){
+    h += '<div class="visitor"><p>You are reading. To write a dream of your own, '
+      + 'or to answer someone else\'s, you need a name here.</p>'
+      + '<button class="btn" data-v="landing">Join</button></div>';
+  } else {
+    h += '<div class="card composer"><label class="fl" for="composer">What did you see?</label>'
+      + '<textarea id="composer" maxlength="' + MAX_POST + '" placeholder="A room. A face. The thing you could not explain."></textarea>'
+      + '<div class="spread" style="margin-top:16px"><span class="count" id="count">0 / ' + MAX_POST + '</span>'
+      + '<button class="btn" id="postBtn" disabled>Post dream</button></div>'
+      + '<p class="hint" style="margin-top:14px">A fragment is enough. One room, one face, one feeling. '
+      + 'Most of what survives waking up is not a story.</p></div>';
+  }
+
+  h += '<div class="statline" id="feedstat"></div>';
 
   if (!cache.posts.length){
-    h += '<div class="empty">No dreams yet.<br>The first one is yours.</div>';
+    h += '<div class="empty">No dreams yet.<br>' + (me ? 'The first one is yours.' : 'Come back soon.') + '</div>';
   } else {
     h += '<div class="feed">';
     cache.posts.forEach(function(p){
-      var own = p.handle === me.handle;
+      var own = me && p.handle === me.handle;
       h += '<article class="post' + (own?' mine':'') + '">' + avatar(p.handle, p.avatar, 's')
         + '<div><div class="post-head">'
         + '<button class="handle" data-go="' + esc(p.handle) + '">' + esc(p.handle) + '</button>'
         + '<span class="when">' + esc(when(p.created_at)) + '</span>'
         + (own ? '<button class="del" data-del="' + p.id + '">delete</button>' : '')
-        + '</div><div class="post-body">' + esc(p.body) + '</div></div></article>';
+        + '</div><div class="post-body">' + esc(p.body) + '</div>'
+        + reactBar(p) + '</div></article>';
     });
     h += '</div>';
   }
@@ -490,7 +587,9 @@ function feedView(){
 function profileView(){
   var d = cache.profile;
   if (!d) return '<div class="empty">Loading&hellip;</div>';
-  var u = d.user, own = u.handle === me.handle;
+  var u = d.user, own = !!(me && u.handle === me.handle);
+
+  // Your own picture is the picker. Everyone else's is just a picture.
   var pic = own
     ? '<input type="file" id="avFile" class="file-in" accept="image/*,.heic,.heif">'
       + '<label class="av-edit" for="avFile" title="Change your picture">'
@@ -514,8 +613,11 @@ function profileView(){
       + '<div class="keyval blur" id="keyv">' + esc(me.lucidKey || '') + '</div>'
       + '<div class="row"><button class="ghost" id="keyReveal">Reveal</button>'
       + '<button class="ghost" id="keyCopy">Copy</button></div>'
-      + '<p class="hint" style="margin-top:14px">Nobody else can see this, including from a public profile page. '
-      + 'The server only ever sends it to you.</p></div>';
+      + '<p class="hint" style="margin-top:14px">Nobody else can see this, including from a public '
+      + 'profile page. The server only ever sends it to you.</p></div>';
+
+    // Patterns are yours alone. Nobody visiting your profile sees them.
+    h += patternsBlock(d.patterns);
   }
 
   h += '<div class="sectitle">' + (own ? 'Your dreams' : 'Dreams') + '</div>';
@@ -523,11 +625,12 @@ function profileView(){
     h += '<div class="empty" style="padding:44px 20px;font-size:17px">Nothing posted yet.</div>';
   } else {
     h += '<div class="feed">';
-    d.posts.forEach(function(p){
+    d.posts.forEach(function(x){
       h += '<article class="post' + (own?' mine':'') + '">' + avatar(u.handle, u.avatar, 's')
-        + '<div><div class="post-head"><span class="when">' + esc(when(p.created_at)) + '</span>'
-        + (own ? '<button class="del" data-del="' + p.id + '">delete</button>' : '')
-        + '</div><div class="post-body">' + esc(p.body) + '</div></div></article>';
+        + '<div><div class="post-head"><span class="when">' + esc(when(x.created_at)) + '</span>'
+        + (own ? '<button class="del" data-del="' + x.id + '">delete</button>' : '')
+        + '</div><div class="post-body">' + esc(x.body) + '</div>'
+        + reactBar(x) + '</div></article>';
     });
     h += '</div>';
   }
@@ -591,6 +694,34 @@ function keyView(){
   return h;
 }
 
+function patternsBlock(pt, total){
+  if (!pt) return '';
+  var h = '<div class="sectitle">Patterns</div>';
+  if (!pt.enough){
+    return h + '<div class="pat"><p class="pat-empty">Three dreams and this starts working. '
+      + 'You have ' + (pt.total || 0) + '.</p></div>';
+  }
+  var lines = [];
+  var list = function(arr){
+    return arr.map(function(x){ return '<b>' + esc(x.label) + '</b> (' + x.n + ')'; }).join(', ');
+  };
+  if (pt.places.length) lines.push('Keeps turning up: ' + list(pt.places) + '.');
+  if (pt.people.length) lines.push('Who is there: ' + list(pt.people) + '.');
+  if (pt.themes.length) lines.push('What happens: ' + list(pt.themes) + '.');
+  if (pt.mall >= 2) lines.push('The mall appears in <b>' + pt.mall + '</b> of your ' + pt.total + ' dreams.');
+  if (pt.lucid >= 1) lines.push('You knew you were dreaming <b>' + pt.lucid + (pt.lucid === 1 ? '</b> time.' : '</b> times.'));
+  if (pt.smallHours >= 2) lines.push('<b>' + pt.smallHours + '</b> of these were written down between two and seven in the morning.');
+  lines.push('<b>' + pt.total + '</b> dreams over <b>' + pt.days + '</b> days.');
+
+  if (lines.length <= 1){
+    return h + '<div class="pat"><p class="pat-empty">Nothing repeats yet. Keep writing and it will.</p></div>';
+  }
+  return h + '<div class="pat">'
+    + lines.map(function(l){ return '<div class="pat-line">' + l + '</div>'; }).join('')
+    + '<p class="pat-note">Counted from the words you wrote, nothing more. This is arithmetic, not '
+    + 'interpretation \u2014 it can tell you a house came up nine times, and nothing at all about why.</p></div>';
+}
+
 function settingsView(){
   return flashHTML()
     + '<div class="eyebrow">Settings</div>'
@@ -622,9 +753,12 @@ function settingsView(){
 /* ── render ──────────────────────────────── */
 function render(){
   var app = document.getElementById('app');
-  if (!me){
+  // Signed out, the landing page is the front door — but the feed, Mall World
+  // and profiles are all readable without an account.
+  if (!me && view === 'landing'){
     app.innerHTML = landing();
   } else {
+    if (!me && (view === 'key' || view === 'settings')) view = 'feed';
     var body = view === 'profile' ? profileView()
       : view === 'key' ? keyView()
       : view === 'mall' ? mallWorld(true)
@@ -688,6 +822,8 @@ function wire(){
     b.onclick = function(){
       var v = b.getAttribute('data-v');
       viewing = null;
+      if (v === 'landing'){ view = 'landing'; render(); window.scrollTo(0,0); return; }
+      if (v === 'feed'){ window.scrollTo(0,0); return loadFeed(); }
       if (v === 'profile') return openProfile(me.handle);
       if (v === 'feed') return loadFeed();
       if (v === 'key') return loadEncounters();
@@ -698,6 +834,21 @@ function wire(){
   Array.prototype.forEach.call(document.querySelectorAll('[data-go]'), function(b){
     b.onclick = function(){ openProfile(b.getAttribute('data-go')); };
   });
+  Array.prototype.forEach.call(document.querySelectorAll('[data-react]'), function(b){
+    b.onclick = function(){
+      if (!me){ view = 'landing'; render(); window.scrollTo(0,0); return; }
+      var parts = b.getAttribute('data-react').split(':');
+      var count = b.querySelector('b');
+      var n = count ? Number(count.textContent) : 0;
+      var on = b.classList.toggle('on');           // answer immediately, correct later
+      n = Math.max(0, n + (on ? 1 : -1));
+      if (n) { if (count) count.textContent = n; else b.insertAdjacentHTML('beforeend', ' <b>' + n + '</b>'); }
+      else if (count) count.remove();
+      api('/api/posts/' + parts[0] + '/react', { method:'POST', body:{ kind: parts[1] }})
+        .catch(function(){ b.classList.toggle('on'); });
+    };
+  });
+
   Array.prototype.forEach.call(document.querySelectorAll('[data-del]'), function(b){
     b.onclick = function(){
       var id = b.getAttribute('data-del');
@@ -836,11 +987,14 @@ function wire(){
     api('/api/signout', { method:'POST' }).catch(function(){})
       .then(function(){
         setToken(null);
-        me = null; view = 'feed'; viewing = null;
+        me = null; view = 'landing'; viewing = null;
         cache = { posts:[], profile:null, encounters:null };
         render(); loadStats();
       });
   }
+  var stat = $('feedstat');
+  if (stat) fillStat(stat);
+
   var so = $('signout'); if (so) so.onclick = doSignout;
   var tso = $('topSignout'); if (tso) tso.onclick = doSignout;
 }
@@ -867,17 +1021,31 @@ function openProfile(handle){
 }
 
 /* ── how many dreamers ───────────────────── */
+var stats = null;
 function loadStats(){
   return fetch(API + '/api/stats', { credentials:'include' })
     .then(function(r){ return r.json(); })
     .then(function(d){
+      stats = d;
       var el = document.getElementById('counter');
-      if (!el || typeof d.dreamers !== 'number') return;
-      el.innerHTML = '<b>' + d.dreamers.toLocaleString() + '</b> ' +
-        (d.dreamers === 1 ? 'dreamer' : 'dreamers');
-      el.classList.add('show');
+      if (el && typeof d.dreamers === 'number'){
+        el.innerHTML = '<b>' + d.dreamers.toLocaleString() + '</b> ' +
+          (d.dreamers === 1 ? 'dreamer' : 'dreamers');
+        el.classList.add('show');
+      }
+      var st = document.getElementById('feedstat');
+      if (st) fillStat(st);
     })
     .catch(function(){ /* a missing count is not worth an error message */ });
+}
+
+// Numbers only. Who met whom, and what they wrote, stays between them.
+function fillStat(el){
+  if (!stats) return;
+  var n = stats.encounters || 0;
+  el.innerHTML = n
+    ? '<b>' + n + '</b> ' + (n === 1 ? 'encounter has' : 'encounters have') + ' been confirmed by both dreamers'
+    : 'No encounters confirmed yet';
 }
 
 /* ── starfield ───────────────────────────── */
@@ -892,12 +1060,29 @@ function loadStats(){
   el.appendChild(frag);
 })();
 
+/* ── add to home screen ──────────────────── */
+(function(){
+  var el = document.getElementById('a2hs'), x = document.getElementById('a2hsX');
+  if (!el || !x) return;
+  var iOS = /iP(hone|ad|od)/.test(navigator.userAgent);
+  var standalone = window.navigator.standalone === true ||
+    (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches);
+  var dismissed = false;
+  try { dismissed = localStorage.getItem('lucid_a2hs') === 'off'; } catch(e){}
+  if (!iOS || standalone || dismissed) return;
+  setTimeout(function(){ el.classList.add('show'); }, 4000);
+  x.onclick = function(){
+    el.classList.remove('show');
+    try { localStorage.setItem('lucid_a2hs','off'); } catch(e){}
+  };
+})();
+
 /* ── boot ────────────────────────────────── */
 render();
 loadStats();
 api('/api/me').then(function(d){
   if (d.user){ me = d.user; loadFeed(); }
-}).catch(function(){ /* landing is already on screen; banner explains it */ });
+}).catch(function(){ /* landing is already on screen; the banner explains it */ });
 
 })();
 </script>
