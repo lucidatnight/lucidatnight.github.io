@@ -99,9 +99,14 @@ button:focus-visible,a:focus-visible,input:focus-visible,textarea:focus-visible{
 /* ── landing ─────────────────────────────── */
 .wrap{display:grid;grid-template-columns:1fr 1fr;min-height:100vh}
 .hero{display:flex;flex-direction:column;justify-content:center;padding:70px 60px;position:relative}
+.hero .wordmark{
+  font-size:clamp(44px, 8.2vw, 78px);
+  letter-spacing:.14em;line-height:1;
+  margin-bottom:38px;
+}
 .wordmark{font-family:var(--type);font-size:22px;letter-spacing:.24em;text-transform:uppercase;color:var(--lunar);margin-bottom:60px}
 .wordmark .d{color:var(--gold)}
-.hero h1{font-family:var(--type);font-size:46px;font-weight:400;line-height:1.18;margin-bottom:26px;text-wrap:balance}
+.hero h1{font-family:var(--type);font-size:clamp(30px, 4.4vw, 42px);font-weight:400;line-height:1.2;margin-bottom:24px;text-wrap:balance}
 .hero h1 .em{color:var(--pulse)}
 .hero p{color:var(--dream);font-size:16px;line-height:1.8;max-width:42ch;margin-bottom:44px}
 .badge{display:inline-flex;align-items:center;gap:10px;align-self:flex-start;font-size:10px;letter-spacing:.2em;text-transform:uppercase;color:var(--glow);border:1px solid var(--edge);border-radius:99px;padding:9px 20px}
@@ -201,13 +206,15 @@ button:focus-visible,a:focus-visible,input:focus-visible,textarea:focus-visible{
 }
 .statline b{color:var(--pulse);font-weight:600}
 .readfeed{
-  display:inline-flex;align-items:center;gap:9px;align-self:flex-start;margin-top:26px;
-  font-family:var(--sans);font-size:11px;font-weight:500;letter-spacing:.14em;
-  text-transform:uppercase;background:none;border:none;color:var(--dream);
-  cursor:pointer;padding:0;transition:color .2s;
+  display:inline-flex;align-items:center;gap:11px;align-self:flex-start;margin-top:30px;
+  font-family:var(--sans);font-size:17px;font-weight:400;letter-spacing:.01em;
+  background:none;border:none;color:var(--dream);
+  cursor:pointer;padding:0;transition:color .2s,gap .2s;
+  border-bottom:1px solid var(--edge);padding-bottom:5px;
 }
-.readfeed:hover{color:var(--pulse)}
-.readfeed span{font-size:14px}
+.readfeed:hover{color:var(--pulse);gap:16px}
+.readfeed span{font-size:19px;line-height:1}
+@media(max-width:860px){.readfeed{font-size:16px}}
 
 /* ── add to home screen ──────────────────── */
 #a2hs{
@@ -289,8 +296,8 @@ label.ghost{display:inline-block}
   .hero{padding:64px 28px 40px;min-height:auto}
   .authpanel{padding:40px 28px 70px;border-left:none;border-top:1px solid var(--edge)}
   .authinner{max-width:none}
-  .hero h1{font-size:34px}
-  .wordmark{margin-bottom:36px}
+  .hero h1{font-size:30px}
+  .hero .wordmark{margin-bottom:24px}
   .moon{display:none}
 }
 @media(max-width:560px){
