@@ -289,6 +289,22 @@ label.ghost{display:inline-block}
 .mw-ask p{font-size:15px;color:var(--dream);line-height:1.75;max-width:52ch;margin-bottom:18px}
 .mw-soon{display:inline-block;font-size:11px;font-weight:500;letter-spacing:.18em;text-transform:uppercase;background:var(--mist);color:var(--glow);border-radius:2px;padding:14px 26px}
 .mw-promise{font-size:13px;color:var(--glow);margin-top:20px;line-height:1.7}
+/* submission form */
+.mwform{border-top:1px solid var(--edge);margin-top:30px;padding-top:28px}
+.mwform .fld{margin-bottom:20px}
+.mwpick{display:flex;align-items:center;gap:16px;flex-wrap:wrap}
+.mwprev{width:96px;height:96px;border:1px dashed var(--edge);border-radius:3px;background:var(--night);display:flex;align-items:center;justify-content:center;overflow:hidden;flex:none}
+.mwprev img{width:100%;height:100%;object-fit:cover;display:block}
+.mwprev span{font-size:10px;letter-spacing:.16em;text-transform:uppercase;color:var(--glow);text-align:center;padding:0 8px;line-height:1.5}
+.mwnote{font-size:12.5px;color:var(--glow);line-height:1.6;margin:9px 0 0;max-width:46ch}
+.mwnote.bad{color:var(--error)}
+.mwcheck{display:flex;gap:11px;align-items:flex-start;font-size:13.5px;color:var(--dream);line-height:1.6;cursor:pointer;margin-bottom:22px}
+.mwcheck input{margin-top:3px;flex:none;accent-color:var(--dream)}
+.mwmine{border-top:1px solid var(--edge);margin-top:30px;padding-top:22px}
+.mwmine h4{font-family:var(--type);font-size:15px;font-weight:400;color:var(--dream);margin-bottom:14px}
+.mwmine li{list-style:none;font-size:13.5px;color:var(--glow);line-height:1.7;padding:9px 0;border-top:1px solid var(--edge)}
+.mwmine li:first-child{border-top:none}
+.mwmine li b{color:var(--dream);font-weight:400}
 .mw.inapp{border-top:none;padding:0 0 40px}
 
 @media(max-width:860px){
@@ -347,7 +363,9 @@ var me = null;            // signed-in user, or null
 var view = 'landing';     // landing | feed | mall | key | profile | settings | donate
 var viewing = null;       // handle being looked at
 var flash = null;         // {t:'err'|'ok', m:string}
-var cache = { posts: [], profile: null, encounters: null };
+var cache = { posts: [], profile: null, encounters: null, submissions: null };
+// Held outside the DOM so a re-render does not lose a picked drawing.
+var mwDrawing = null;
 var authTab = 'signup';
 var pendingKey = null;    // shown once after signup
 var pendingUser = null;   // held back until the key is acknowledged
@@ -464,9 +482,52 @@ function mallWorld(inApp){
     + 'agreement between strangers who have never spoken is worth looking at closely.</p>'
     + '<p>Pencil on paper is fine. A photo of it on your phone is fine. Accuracy is not the point. The parts '
     + 'you are certain about are the point.</p>'
-    + '<span class="mw-soon">Submissions open soon</span>'
+    + mwSubmit()
     + '<p class="mw-promise">Nothing you send is published anywhere without asking you first.</p>'
     + '</div></div></section>';
+}
+
+/* The upload form. An account is required, so a drawing can always be traced
+ * back to a person who can be asked about it. Signed out, this is an invitation
+ * rather than a wall. */
+function mwSubmit(){
+  if (!me){
+    return '<div class="mwform">'
+      + '<p style="margin-bottom:18px">Sending a drawing needs an account, so that if your drawing '
+      + 'matches someone else\'s there is a way to come back and ask you about it.</p>'
+      + '<button class="btn" data-v="landing">Make an account</button></div>';
+  }
+  var subs = cache.submissions;
+  var mine = '';
+  if (subs && subs.length){
+    mine = '<div class="mwmine"><h4>' + (subs.length === 1 ? 'Your drawing' : 'Your ' + subs.length + ' drawings') + '</h4><ul>'
+      + subs.map(function(s){
+          return '<li><b>' + new Date(s.created_at).toLocaleDateString(undefined,{month:'short',day:'numeric',year:'numeric'})
+            + '</b> &nbsp;' + esc(String(s.description).slice(0,110))
+            + (String(s.description).length > 110 ? '…' : '') + '</li>';
+        }).join('')
+      + '</ul></div>';
+  }
+  return '<div class="mwform">'
+    + flashHTML()
+    + '<div class="fld"><span class="fl">Your drawing</span>'
+    + '<div class="mwpick">'
+    // Painted from mwDrawing, not from the DOM, so a re-render never loses it.
+    + '<div class="mwprev" id="mwPrev">' + (mwDrawing
+        ? '<img src="' + mwDrawing + '" alt="">' : '<span>No file yet</span>') + '</div>'
+    + '<div><input type="file" id="mwFile" class="file-in" accept="image/*,.heic,.heif">'
+    + '<label class="ghost" for="mwFile">Choose a photo</label>'
+    + '<p class="mwnote" id="mwNote">A phone photo of paper is fine. It is shrunk in your browser before it '
+    + 'is sent, which also strips the location tag off the photo.</p></div></div></div>'
+    + '<div class="fld"><label class="fl" for="mwDesc">What do you remember</label>'
+    + '<textarea id="mwDesc" rows="4" maxlength="1000" placeholder="Where in the mall this is, what was around it, what you were doing there."></textarea></div>'
+    + '<div class="fld"><label class="fl" for="mwPlace">Where in the mall (optional)</label>'
+    + '<input type="text" id="mwPlace" maxlength="200" placeholder="Second floor, past the food court"></div>'
+    + '<label class="mwcheck"><input type="checkbox" id="mwShare">'
+    + '<span>You may show this drawing on the map, credited to ' + esc(me.handle) + '. '
+    + 'Leave it unticked and only I will ever see it.</span></label>'
+    + '<button class="btn" id="mwSend">Send drawing</button>'
+    + mine + '</div>';
 }
 
 function support(inApp){
@@ -835,6 +896,7 @@ function wire(){
       if (v === 'feed') return loadFeed();
       if (v === 'key') return loadEncounters();
       if (v === 'settings'){ view = 'settings'; render(); window.scrollTo(0,0); return; }
+      if (v === 'mall'){ view = 'mall'; render(); window.scrollTo(0,0); loadSubmissions(); return; }
       view = v; render();
     };
   });
@@ -949,6 +1011,81 @@ function wire(){
       img.src = url;
     };
   }
+  /* ── mall world drawing ── */
+  var mwFile = $('mwFile');
+  if (mwFile){
+    mwFile.onchange = function(){
+      var f = mwFile.files && mwFile.files[0];
+      var note = $('mwNote'), prev = $('mwPrev');
+      if (!f) return;
+      note.className = 'mwnote'; note.textContent = 'Reading…';
+      var img = new Image(), url = URL.createObjectURL(f);
+      img.onload = function(){
+        // Re-drawn through a canvas, so every EXIF tag goes, GPS with it.
+        // Long edge 1600 is enough to read a pencil line and small enough to
+        // send over a phone connection.
+        var MAX = 1600, w = img.width, h = img.height;
+        var scale = Math.min(1, MAX / Math.max(w, h));
+        var c = document.createElement('canvas');
+        c.width = Math.round(w * scale); c.height = Math.round(h * scale);
+        c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
+        var quality = 0.85, data = c.toDataURL('image/jpeg', quality);
+        // The server stops at 6 MB. Step down rather than fail at the end.
+        while (data.length > 5.2 * 1024 * 1024 && quality > 0.45){
+          quality -= 0.12; data = c.toDataURL('image/jpeg', quality);
+        }
+        URL.revokeObjectURL(url);
+        mwDrawing = data;
+        prev.innerHTML = '<img src="' + data + '" alt="">';
+        note.textContent = 'Ready to send. ' + Math.round(data.length / 1024 * 0.75) + ' KB.';
+      };
+      img.onerror = function(){
+        URL.revokeObjectURL(url);
+        mwDrawing = null;
+        prev.innerHTML = '<span>No file yet</span>';
+        note.className = 'mwnote bad';
+        note.textContent = 'That image could not be read. iPhone photos are often HEIC, which browsers cannot open — take a screenshot of it and send that instead.';
+      };
+      img.src = url;
+    };
+  }
+  var mwSend = $('mwSend');
+  if (mwSend) mwSend.onclick = function(){
+    var note = $('mwNote'), desc = $('mwDesc').value.trim();
+    if (!mwDrawing){
+      note.className = 'mwnote bad';
+      note.textContent = 'Choose a photo of your drawing first.';
+      return;
+    }
+    if (desc.length < 10){
+      // Deliberately not a flash: a flash re-renders, and a re-render would
+      // throw away whatever this person had already typed.
+      var d = $('mwDesc');
+      d.style.borderColor = 'var(--error)';
+      note.className = 'mwnote bad';
+      note.textContent = 'Write a line about what you remember too. A drawing on its own is hard to compare with anyone else’s.';
+      d.focus();
+      return;
+    }
+    mwSend.disabled = true; mwSend.textContent = 'Sending';
+    api('/api/mallworld', { method:'POST', body:{
+      image: mwDrawing, description: desc,
+      place: $('mwPlace').value.trim(), mayShare: $('mwShare').checked
+    }}).then(function(){
+      mwDrawing = null;
+      // Load first, then flash — the render inside loadSubmissions eats it otherwise.
+      loadSubmissions().then(function(){
+        flash = { t:'ok', m:'Got it. Thank you — it is on the pile.' };
+        render();
+      });
+    }).catch(function(err){
+      mwSend.disabled = false; mwSend.textContent = 'Send drawing';
+      flash = { t:'err', m: err.message === 'offline'
+        ? 'That did not send. Try again when Lucid is back.' : err.message };
+      render();
+    });
+  };
+
   var avClear = $('avClear');
   if (avClear) avClear.onclick = function(){
     api('/api/me', { method:'PATCH', body:{ avatar:null }})
@@ -995,7 +1132,7 @@ function wire(){
       .then(function(){
         setToken(null);
         me = null; view = 'landing'; viewing = null;
-        cache = { posts:[], profile:null, encounters:null };
+        cache = { posts:[], profile:null, encounters:null, submissions:null };
         render(); loadStats();
       });
   }
@@ -1018,6 +1155,13 @@ function loadEncounters(){
   return api('/api/encounters').then(function(d){
     cache.encounters = d.encounters || []; render();
   }).catch(function(){ cache.encounters = []; render(); });
+}
+function loadSubmissions(){
+  if (!me) return Promise.resolve();
+  return api('/api/mallworld').then(function(d){
+    cache.submissions = d.submissions || [];
+    if (view === 'mall') render();
+  }).catch(function(){ /* the form still works without the list */ });
 }
 function openProfile(handle){
   view = 'profile'; viewing = handle === (me && me.handle) ? null : handle;
