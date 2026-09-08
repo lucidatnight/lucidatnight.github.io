@@ -1228,8 +1228,40 @@ function fillStat(el){
   };
 })();
 
+/* ── counting this visit ─────────────────────
+   Once per page load, not once per render. Sends a random id that this
+   browser made up for itself and the host of whatever linked here — never
+   the full referring URL, which can carry search terms.
+
+   The server hashes that id together with today's date before storing it,
+   so it counts you once today and cannot recognise you tomorrow. If any of
+   this fails, nothing happens: the whole thing is wrapped and the page
+   never waits on it. */
+function countVisit(){
+  var id;
+  try {
+    id = localStorage.getItem('lucid_b');
+    if (!id){
+      id = (crypto.randomUUID ? crypto.randomUUID() : String(Math.random()).slice(2) + Date.now())
+             .replace(/[^a-zA-Z0-9]/g,'').slice(0,32);
+      localStorage.setItem('lucid_b', id);
+    }
+  } catch(e){ id = ''; }   // private browsing: still counts as a load, just not as a browser
+
+  var host = '';
+  try { if (document.referrer) host = new URL(document.referrer).hostname; } catch(e){}
+
+  try {
+    fetch(API + '/api/visit', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ bid: id, ref: host }), keepalive: true
+    }).catch(function(){});
+  } catch(e){}
+}
+
 /* ── boot ────────────────────────────────── */
 render();
+countVisit();
 loadStats();
 api('/api/me').then(function(d){
   if (d.user){ me = d.user; loadFeed(); }
