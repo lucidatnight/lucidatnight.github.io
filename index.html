@@ -63,6 +63,9 @@ body{background:var(--night);color:var(--lunar);font-family:var(--sans);font-wei
 .btn:hover:not(:disabled){background:var(--pulse)}
 .btn:disabled{opacity:.35;cursor:not-allowed}
 .btn.wide{width:100%}
+.ghost.wide{width:100%}
+/* the blind question, on the signed-out panel right after signup */
+.ask-q{font-family:var(--type);font-size:23px;font-weight:400;color:var(--lunar);margin-top:12px;line-height:1.35;text-wrap:balance}
 .ghost{font-family:var(--sans);font-size:11px;font-weight:500;letter-spacing:.16em;text-transform:uppercase;background:none;border:1px solid var(--edge);color:var(--dream);border-radius:2px;padding:11px 20px;cursor:pointer;transition:border-color .25s,color .25s}
 .ghost:hover{border-color:var(--glow);color:var(--pulse)}
 input[type=text],input[type=email],input[type=password],textarea{width:100%;background:var(--night);border:1px solid var(--edge);border-radius:2px;color:var(--lunar);font-family:var(--sans);font-size:15px;font-weight:300;padding:13px 15px;transition:border-color .25s}
@@ -506,6 +509,7 @@ function highlight(text, qq){
 var authTab = 'signup';
 var pendingKey = null;    // shown once after signup
 var pendingUser = null;   // held back until the key is acknowledged
+var pendingAsk = null;    // the blind question, shown before the key screen
 
 /* ── api ─────────────────────────────────── */
 // The site and the API live on different domains, and Safari blocks
@@ -902,7 +906,21 @@ function landing(){
     + '<div class="moon">' + moonSVG() + '</div>'
     + '</div><div class="authpanel"><div class="authinner">';
 
-  if (pendingKey){
+  if (pendingAsk){
+    // Asked before the key screen, and long before the feed, because the only
+    // thing that makes this answer worth having is that it was given before
+    // they had read anything at all. Every second of delay costs something.
+    h += '<div class="stack">'
+      + '<div><div class="eyebrow">One question, before you go in</div>'
+      + '<h2 class="ask-q">' + esc(pendingAsk.text) + '</h2></div>'
+      + '<textarea id="askIn" maxlength="1200" placeholder="" spellcheck="true"></textarea>'
+      + '<p class="hint">' + esc(pendingAsk.hint) + '</p>'
+      + '<button class="btn wide" id="askSend">Send it</button>'
+      + '<button class="ghost wide" id="askSkip">I have not been there</button>'
+      + '<p class="hint">Nobody else sees this, and there is no right answer. '
+      + 'It is asked now, before you have read anything here, because an answer '
+      + 'given afterwards would tell us nothing.</p></div>';
+  } else if (pendingKey){
     h += '<div class="stack">'
       + '<div><div class="eyebrow">Account created</div>'
       + '<h2 style="font-family:var(--type);font-size:27px;font-weight:400;margin-top:12px">Your key.</h2></div>'
@@ -1391,7 +1409,16 @@ function wire(){
     }}).then(function(d){
       // Hold the user back so the key screen (part of the signed-out view) can show.
       setToken(d.token);
-      pendingUser = d.user; pendingKey = d.user.lucidKey; render(); loadStats();
+      pendingUser = d.user; pendingKey = d.user.lucidKey;
+      render(); loadStats();
+      // Then ask the question, if the server has one. Fetched rather than
+      // hard-coded here so the wording can change on the server without
+      // waiting for everybody's browser to pick up a new page.
+      api('/api/blind')
+        .then(function(b){
+          if (b && b.question && !b.answered){ pendingAsk = b.question; render(); }
+        })
+        .catch(function(){ /* no question, no problem — carry on to the key */ });
     }).catch(function(err){
       flash = { t:'err', m: err.message === 'offline'
         ? 'Cannot reach Lucid right now. Try again shortly.' : err.message };
@@ -1412,6 +1439,19 @@ function wire(){
         authTab = 'signin'; render();
       });
   };
+
+  var askSend = $('askSend'), askSkip = $('askSkip');
+  if (askSend) askSend.onclick = function(){
+    var text = ($('askIn').value || '').trim();
+    if (!text) { pendingAsk = null; render(); return; }
+    askSend.disabled = true; askSend.textContent = 'Sending';
+    // Either way the person moves on. A failed send must not strand somebody
+    // on a question they never asked to be shown.
+    api('/api/blind', { method:'POST', body:{ answer: text }})
+      .catch(function(){})
+      .then(function(){ pendingAsk = null; render(); });
+  };
+  if (askSkip) askSkip.onclick = function(){ pendingAsk = null; render(); };
 
   var kg = $('keyGo');
   if (kg) kg.onclick = function(){
