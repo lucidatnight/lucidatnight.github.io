@@ -248,6 +248,8 @@ mark{background:rgba(212,175,106,.26);color:var(--lunar);border-radius:2px;paddi
 .tiny{font-family:var(--sans);font-size:10px;font-weight:500;letter-spacing:.14em;text-transform:uppercase;background:none;border:1px solid var(--edge);color:var(--glow);border-radius:2px;padding:8px 14px;cursor:pointer;transition:border-color .22s,color .22s}
 .tiny:hover{border-color:var(--glow);color:var(--pulse)}
 .pbio.none{color:#4a4470}
+.pcontact{margin-top:12px;font-size:14px;color:var(--dream);line-height:1.6;word-break:break-word}
+.pcontact span{font-size:10px;letter-spacing:.2em;text-transform:uppercase;color:var(--glow);margin-right:9px}
 
 /* ── the key tab ─────────────────────────── */
 .kw h2{font-family:var(--type);font-size:33px;font-weight:400;line-height:1.22;margin:14px 0 20px;color:var(--lunar);text-wrap:balance}
@@ -379,7 +381,7 @@ label.ghost{display:inline-block}
 'use strict';
 
 var API = 'https://dualuse.tailb152cd.ts.net';
-var MAX_POST = 600, MAX_BIO = 160;
+var MAX_POST = 600, MAX_BIO = 160, MAX_CONTACT = 80;
 
 // Paste the Ko-fi link here once the account exists. Empty = button reads "opening soon".
 var DONATE_URL = '';
@@ -829,6 +831,10 @@ function profileView(){
     + d.postCount + (d.postCount === 1 ? ' dream' : ' dreams') + '</div>'
     + (u.bio ? '<div class="pbio">' + esc(u.bio) + '</div>'
              : (own ? '<div class="pbio none">No bio yet.</div>' : ''))
+    // Deliberately not a clickable link. Anyone can type anything here, and a
+    // site that turns strangers' text into links is a site that ships people
+    // somewhere they did not choose to go.
+    + (u.contact ? '<div class="pcontact"><span>Find them at</span> ' + esc(u.contact) + '</div>' : '')
     + (own ? '<div class="pactions"><button class="tiny" data-v="settings">Settings</button>'
              + '<span class="hint" id="avName">Click your picture to change it</span></div>' : '')
     + '</div></div>';
@@ -958,6 +964,19 @@ function settingsView(){
     + '<div><textarea id="bioIn" maxlength="' + MAX_BIO + '" style="min-height:88px" placeholder="A sentence about how you dream.">' + esc(me.bio || '') + '</textarea>'
     + '<p class="hint" style="margin-top:9px">Up to ' + MAX_BIO + ' characters. Shown on your profile to anyone who visits it.</p></div>'
     + '<div><button class="btn" id="saveProfile">Save bio</button></div>'
+    + '</div></div>'
+
+    + '<div class="sectitle">How people can reach you</div>'
+    + '<div class="card"><div class="stack">'
+    + '<div><input type="text" id="contactIn" maxlength="' + MAX_CONTACT + '" '
+    + 'placeholder="@yourname on Instagram" value="' + esc(me.contact || '') + '">'
+    + '<p class="hint" style="margin-top:9px">Optional, and blank unless you fill it in. '
+    + 'If two of you keep ending up in the same place, this is how you find each other. '
+    + '<b style="color:var(--dream);font-weight:400">Anyone who visits your profile can read it</b>, '
+    + 'so put something you are happy for strangers to see — a social handle rather than '
+    + 'a phone number. Lucid shows it as plain text and never as a link.</p></div>'
+    + '<div><button class="btn" id="saveContact">Save</button>'
+    + (me.contact ? ' <button class="ghost" id="clearContact">Remove</button>' : '') + '</div>'
     + '</div></div>'
 
     + '<div class="sectitle">Picture</div>'
@@ -1281,6 +1300,19 @@ function wire(){
       })
       .catch(function(err){ flash = { t:'err', m: err.message }; render(); });
   };
+
+  function saveContact(value, done){
+    api('/api/me', { method:'PATCH', body: { contact: value } })
+      .then(function(d){ me = d.user; flash = { t:'ok', m: done }; render(); })
+      .catch(function(err){ flash = { t:'err', m: err.message }; render(); });
+  }
+  var sc2 = $('saveContact');
+  if (sc2) sc2.onclick = function(){
+    sc2.disabled = true; sc2.textContent = 'Saving';
+    saveContact(($('contactIn') || {}).value || '', 'Saved. It is on your profile now.');
+  };
+  var cc = $('clearContact');
+  if (cc) cc.onclick = function(){ saveContact('', 'Removed from your profile.'); };
 
   var eb = $('encBtn');
   if (eb) eb.onclick = function(){
