@@ -21,6 +21,11 @@
   --sans:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
 }
 *{margin:0;padding:0;box-sizing:border-box}
+/* The browser's own rule for the hidden attribute is display:none, and any
+   display given to a class beats it. Several things here are flex and are
+   hidden by attribute — the legend on the game-over panel, the two scores
+   before anyone has one — so this has to win. */
+[hidden]{display:none!important}
 body{
   background:var(--night); color:var(--dream);
   font-family:var(--sans); font-weight:300;
