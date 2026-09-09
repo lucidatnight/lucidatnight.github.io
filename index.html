@@ -166,6 +166,31 @@ mark{background:rgba(212,175,106,.26);color:var(--lunar);border-radius:2px;paddi
 .mine .handle{color:var(--gold)}
 .del{font-size:10px;letter-spacing:.14em;text-transform:uppercase;background:none;border:none;color:#4a4470;cursor:pointer;padding:0;font-family:var(--sans);transition:color .2s}
 .del:hover{color:var(--error)}
+/* Deliberately the quietest thing on a post. A report button that shouts is a
+   report button people press to disagree with somebody. */
+.rep{font-size:10px;letter-spacing:.14em;text-transform:uppercase;background:none;border:none;color:#3a3558;cursor:pointer;padding:0;font-family:var(--sans);transition:color .2s}
+.rep:hover{color:var(--dream)}
+
+/* the panel that slides over everything for a report, or for a word with
+   somebody who has just written something about themselves */
+.sheet{position:fixed;inset:0;z-index:60;display:flex;align-items:center;justify-content:center;padding:20px;background:rgba(0,0,0,.72);backdrop-filter:blur(3px);overflow-y:auto}
+.sheet-box{width:100%;max-width:460px;margin:auto;background:var(--deep);border:1px solid var(--edge);border-top:2px solid var(--gold);border-radius:3px;padding:28px 26px}
+.sheet-box h3{font-family:var(--type);font-size:24px;font-weight:400;color:var(--lunar);margin-bottom:12px;line-height:1.25}
+.sheet-small{font-size:13px;color:var(--glow);line-height:1.7;margin-bottom:18px}
+.sheet-row{display:flex;gap:10px;justify-content:flex-end;margin-top:20px;flex-wrap:wrap}
+.sheet-err{font-size:12.5px;color:var(--error);line-height:1.6;margin-top:12px;min-height:1px}
+.reasons{display:flex;flex-direction:column;gap:2px;margin-bottom:14px}
+.reason{display:flex;align-items:flex-start;gap:11px;padding:9px 0;font-size:14px;color:var(--dream);cursor:pointer;line-height:1.5}
+.reason input{margin-top:3px;accent-color:var(--pulse);flex:none}
+.reason:hover span{color:var(--lunar)}
+.sheet-box textarea{width:100%;min-height:70px;background:var(--void);border:1px solid var(--edge);border-radius:2px;color:var(--dream);padding:12px 14px;font-family:var(--sans);font-size:14px;line-height:1.6;resize:vertical}
+.sheet-box textarea:focus{outline:none;border-color:var(--glow)}
+.care{border-left:2px solid var(--gold);padding:2px 0 2px 18px;margin:18px 0}
+.care-lead{font-size:14px;color:var(--dream);line-height:1.7;margin-bottom:14px}
+.care-list{list-style:none;font-size:13.5px;color:var(--dream);line-height:1.65}
+.care-list li{margin-bottom:11px}
+.care-list b{color:var(--lunar);font-weight:500}
+.care-url{font-family:var(--type);color:var(--gold)}
 .empty{text-align:center;padding:64px 20px;color:var(--glow);font-family:var(--type);font-size:19px;letter-spacing:.03em;line-height:1.7}
 
 .phead{display:flex;gap:22px;align-items:flex-start;padding-bottom:28px;border-bottom:1px solid var(--edge)}
@@ -913,6 +938,108 @@ function landing(){
   return h;
 }
 
+/* ── reporting, and looking after people ───
+   Both of these live outside render(). They are built straight onto the page
+   and take themselves off again, so opening one cannot throw away a dream
+   somebody is halfway through typing. */
+
+// Held apart from the report copy because it is shown in two situations that
+// have nothing to do with each other: somebody worried about a stranger, and
+// somebody who has just written something about themselves.
+function careHTML(lead){
+  return '<div class="care">'
+    + '<p class="care-lead">' + lead + '</p>'
+    + '<ul class="care-list">'
+    + '<li><b>In the United States</b> — call or text <b>988</b>, any time, and you will reach '
+    + 'the Suicide and Crisis Lifeline.</li>'
+    + '<li><b>Anywhere else</b> — <span class="care-url">findahelpline.com</span> lists services by country.</li>'
+    + '<li><b>If someone is in immediate danger</b>, your local emergency number is the fastest route.</li>'
+    + '</ul></div>';
+}
+
+function closeSheet(){
+  var s = document.getElementById('sheet');
+  if (s) s.remove();
+  document.removeEventListener('keydown', sheetKey);
+}
+function sheetKey(e){ if (e.key === 'Escape') closeSheet(); }
+
+function openSheet(inner){
+  closeSheet();
+  var el = document.createElement('div');
+  el.id = 'sheet';
+  el.className = 'sheet';
+  el.innerHTML = '<div class="sheet-box" role="dialog" aria-modal="true">' + inner + '</div>';
+  el.addEventListener('click', function(e){ if (e.target === el) closeSheet(); });
+  document.body.appendChild(el);
+  document.addEventListener('keydown', sheetKey);
+  return el;
+}
+
+function showCare(){
+  var el = openSheet(
+    '<h3>Before you go.</h3>'
+    + careHTML('What you wrote reads like it might be about you rather than about a dream. '
+             + 'Nobody has been told and nothing has been flagged — this is only on your screen.')
+    + '<p class="sheet-small">If that is wrong, ignore it. It is a guess made by a machine '
+    + 'reading words, and it gets people wrong.</p>'
+    + '<div class="sheet-row"><button class="btn" id="careOk">Close</button></div>'
+  );
+  el.querySelector('#careOk').onclick = closeSheet;
+}
+
+var REPORT_REASONS = [
+  ['abuse',   'Abusive or hateful'],
+  ['spam',    'Spam or advertising'],
+  ['sexual',  'Sexual content'],
+  ['worried', 'I am worried about this person'],
+  ['other',   'Something else']
+];
+
+function openReport(postId){
+  var el = openSheet(
+    '<h3>Report this dream.</h3>'
+    + '<p class="sheet-small">This goes to whoever looks after Lucid. Nothing happens to the '
+    + 'post automatically, and the person who wrote it is not told who reported it.</p>'
+    + '<div class="reasons">' + REPORT_REASONS.map(function(r, i){
+        return '<label class="reason"><input type="radio" name="rr" value="' + r[0] + '"'
+             + (i === 0 ? ' checked' : '') + '><span>' + r[1] + '</span></label>';
+      }).join('') + '</div>'
+    + '<textarea id="repNote" maxlength="300" placeholder="Anything worth knowing (optional)"></textarea>'
+    + '<div class="sheet-row"><button class="ghost" id="repCancel">Cancel</button>'
+    + '<button class="btn" id="repSend">Send report</button></div>'
+    + '<p class="sheet-err" id="repErr"></p>'
+  );
+
+  el.querySelector('#repCancel').onclick = closeSheet;
+  el.querySelector('#repSend').onclick = function(){
+    var btn = el.querySelector('#repSend');
+    var picked = el.querySelector('input[name="rr"]:checked');
+    var reason = picked ? picked.value : 'other';
+    var note = el.querySelector('#repNote').value;
+    btn.disabled = true; btn.textContent = 'Sending';
+
+    api('/api/posts/' + postId + '/report', { method:'POST', body:{ reason:reason, note:note }})
+      .then(function(d){
+        var box = el.querySelector('.sheet-box');
+        box.innerHTML = '<h3>Thank you.</h3>'
+          + '<p class="sheet-small">It has been passed on. You will not hear back about it, '
+          + 'which is deliberate — reports are not a conversation between you and the person '
+          + 'you reported.</p>'
+          + (d && d.care
+              ? careHTML('You said you were worried about them. In case it helps you, or them:')
+              : '')
+          + '<div class="sheet-row"><button class="btn" id="repDone">Close</button></div>';
+        box.querySelector('#repDone').onclick = closeSheet;
+      })
+      .catch(function(err){
+        btn.disabled = false; btn.textContent = 'Send report';
+        el.querySelector('#repErr').textContent = err.message === 'offline'
+          ? 'That did not send. Try again in a moment.' : err.message;
+      });
+  };
+}
+
 /* ── mini games ───────────────────────────
    Somewhere to put the things that are not the journal. A game does not belong
    in the middle of a feed of other people's dreams, and the reason for having
@@ -1027,6 +1154,7 @@ function feedView(){
         + '<button class="handle" data-go="' + esc(p.handle) + '">' + esc(p.handle) + '</button>'
         + '<span class="when">' + esc(when(p.created_at)) + '</span>'
         + (own ? '<button class="del" data-del="' + p.id + '">delete</button>' : '')
+        + (!own && me ? '<button class="rep" data-rep="' + p.id + '" title="Report this dream">report</button>' : '')
         + '</div><div class="post-body">' + highlight(p.body, query) + '</div>'
         + reactBar(p) + '</div></article>';
     });
@@ -1324,6 +1452,10 @@ function wire(){
     };
   });
 
+  Array.prototype.forEach.call(document.querySelectorAll('[data-rep]'), function(b){
+    b.onclick = function(){ openReport(b.getAttribute('data-rep')); };
+  });
+
   Array.prototype.forEach.call(document.querySelectorAll('[data-del]'), function(b){
     b.onclick = function(){
       var id = b.getAttribute('data-del');
@@ -1347,7 +1479,10 @@ function wire(){
       var text = ta.value.trim();
       pb.disabled = true; pb.textContent = 'Posting';
       api('/api/posts', { method:'POST', body:{ body:text }})
-        .then(function(){ loadFeed(); })
+        // care comes back true when what they wrote reads like it is about
+        // them rather than about a dream. Shown to them, once, and to nobody
+        // else — see the note on soundsLikeCrisis in the server.
+        .then(function(d){ if (d && d.care) showCare(); loadFeed(); })
         .catch(function(err){
           flash = { t:'err', m: err.message === 'offline'
             ? 'That did not send. Your words are still in the box below.' : err.message };
