@@ -180,7 +180,7 @@ canvas{grid-area:1/1;align-self:center;display:block;width:100%;height:auto;touc
       </div>
       <div class="bests" id="bests" hidden>
         <span class="best"><b id="myBest">0</b><span>your best</span></span>
-        <span class="best quiet"><b id="topBest">—</b><span id="topWho">best so far</span></span>
+        <span class="best quiet"><b id="topBest">—</b><span id="topWho">top score</span></span>
       </div>
       <button class="btn" id="go">Begin</button>
       <p class="small" id="vs">Three lapses and the night is over.</p>
@@ -189,7 +189,7 @@ canvas{grid-area:1/1;align-self:center;display:block;width:100%;height:auto;touc
 
   <div class="board">
     <div class="bhead">
-      <span class="btitle">The board</span>
+      <span class="btitle">Leaderboard</span>
       <span class="bnote" id="bnote"></span>
     </div>
     <div id="brows"></div>
@@ -266,10 +266,12 @@ canvas{grid-area:1/1;align-self:center;display:block;width:100%;height:auto;touc
       topWhoEl.textContent = board.top[0].handle + ' leads';
     } else {
       topBestEl.textContent = '—';
-      topWhoEl.textContent = 'best so far';
+      topWhoEl.textContent = 'top score';
     }
-    // Nothing to show before anyone has counted anything at all.
-    bestsEl.hidden = !(mine > 0 || (board && board.top && board.top.length));
+    // Shown as soon as the board has been reached, even when it is empty. An
+    // empty pair of numbers with their labels tells you where your score will
+    // appear; hiding them left people asking where the leaderboard was.
+    bestsEl.hidden = !(mine > 0 || board);
   }
 
   function row(rank, handle, score, me, gap) {
