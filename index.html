@@ -532,7 +532,11 @@ function mallWorld(inApp){
     + '<img src="mallworld-map.jpg" alt="A blank mall directory floor plan. '
     + 'A circular food court at the centre, wings of unlabelled units running off it, '
     + 'escalators, and corridors that leave the edge of the plan. Across it, the words '
-    + 'Mall World, Coming Soon." loading="lazy" width="1800" height="1005">'
+    // Not lazy-loaded. The plan is injected by a re-render rather than being in
+    // the page at load, and Chrome then never schedules a lazy image — it sat
+    // blank with the request never made. It is 160 KB and it is the point of
+    // this tab, so it loads eagerly.
+    + 'Mall World, Coming Soon." width="1800" height="1005">'
     + '<figcaption>Every space on this plan is empty because nothing has been confirmed yet. '
     + 'Units get named as enough drawings agree on what is in them.</figcaption>'
     + '</figure>'
