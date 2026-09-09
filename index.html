@@ -148,6 +148,14 @@ button:focus-visible,a:focus-visible,input:focus-visible,textarea:focus-visible{
 .count.warn{color:var(--gold)}
 .count.over{color:var(--error)}
 
+/* search */
+.srch{position:relative;margin-top:30px}
+.srch input{padding-left:38px;padding-right:80px;font-size:14.5px}
+.srch .mag{position:absolute;left:14px;top:50%;transform:translateY(-50%);color:var(--glow);font-size:14px;pointer-events:none;line-height:1}
+.srch .clr{position:absolute;right:10px;top:50%;transform:translateY(-50%);background:none;border:none;color:var(--glow);font-size:10px;letter-spacing:.14em;text-transform:uppercase;cursor:pointer;padding:6px 8px}
+.srch .clr:hover{color:var(--pulse)}
+.srchnote{font-size:12.5px;color:var(--glow);margin-top:10px;line-height:1.6}
+mark{background:rgba(212,175,106,.26);color:var(--lunar);border-radius:2px;padding:0 2px}
 .feed{display:flex;flex-direction:column;margin-top:34px}
 .post{padding:24px 0;border-top:1px solid var(--edge);display:grid;grid-template-columns:38px 1fr;gap:16px;animation:rise .45s ease both}
 .post-head{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;margin-bottom:7px}
@@ -366,6 +374,43 @@ var flash = null;         // {t:'err'|'ok', m:string}
 var cache = { posts: [], profile: null, encounters: null, submissions: null };
 // Held outside the DOM so a re-render does not lose a picked drawing.
 var mwDrawing = null;
+// What is typed in the feed's search box, and whether it should keep focus
+// through the re-render that typing causes.
+var query = '', searchFocus = false;
+
+/* Every word has to appear somewhere in the dream, or in who wrote it.
+   This filters what is displayed. It does not touch the database, and it
+   does not ask the server for anything — the posts are already here. */
+function matching(posts, qq){
+  qq = String(qq || '').trim().toLowerCase();
+  if (!qq) return posts;
+  var words = qq.split(/\s+/).filter(Boolean);
+  return posts.filter(function(p){
+    var hay = (String(p.body || '') + ' ' + String(p.handle || '')).toLowerCase();
+    return words.every(function(w){ return hay.indexOf(w) !== -1; });
+  });
+}
+
+/* Mark the matched words. The matching runs on the raw text and each piece is
+   escaped afterwards — escaping first would let a search for "amp" land inside
+   an &amp; and tear the markup open. */
+function highlight(text, qq){
+  text = String(text || '');
+  qq = String(qq || '').trim();
+  if (!qq) return esc(text);
+  var words = qq.split(/\s+/).filter(Boolean)
+    .map(function(w){ return w.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); });
+  if (!words.length) return esc(text);
+  var re;
+  try { re = new RegExp('(' + words.join('|') + ')', 'gi'); } catch(e){ return esc(text); }
+  var out = '', last = 0, m;
+  while ((m = re.exec(text)) !== null){
+    if (m.index === re.lastIndex) { re.lastIndex++; continue; }
+    out += esc(text.slice(last, m.index)) + '<mark>' + esc(m[0]) + '</mark>';
+    last = m.index + m[0].length;
+  }
+  return out + esc(text.slice(last));
+}
 var authTab = 'signup';
 var pendingKey = null;    // shown once after signup
 var pendingUser = null;   // held back until the key is acknowledged
@@ -632,18 +677,37 @@ function feedView(){
 
   h += '<div class="statline" id="feedstat"></div>';
 
+  // Search the words people actually wrote. Nothing is filtered out of the
+  // database and nothing is deleted — this hides rows from the page, and
+  // emptying the box brings them all back.
+  h += '<div class="srch"><span class="mag">⌕</span>'
+    + '<input type="text" id="srch" placeholder="Search dreams — a place, a person, a word" '
+    + 'value="' + esc(query) + '" autocomplete="off" spellcheck="false">'
+    + (query ? '<button class="clr" id="srchClr">Clear</button>' : '') + '</div>';
+
+  var shown = matching(cache.posts, query);
+
+  if (query){
+    h += '<p class="srchnote">' + (shown.length
+      ? shown.length + (shown.length === 1 ? ' dream mentions ' : ' dreams mention ') + '&ldquo;' + esc(query) + '&rdquo;.'
+      : 'No dream mentions &ldquo;' + esc(query) + '&rdquo;. Nothing has been removed — clear the box to see them all again.')
+      + '</p>';
+  }
+
   if (!cache.posts.length){
     h += '<div class="empty">No dreams yet.<br>' + (me ? 'The first one is yours.' : 'Come back soon.') + '</div>';
+  } else if (!shown.length){
+    h += '';   // the note above already said it; an empty-state block would repeat it
   } else {
     h += '<div class="feed">';
-    cache.posts.forEach(function(p){
+    shown.forEach(function(p){
       var own = me && p.handle === me.handle;
       h += '<article class="post' + (own?' mine':'') + '">' + avatar(p.handle, p.avatar, 's')
         + '<div><div class="post-head">'
         + '<button class="handle" data-go="' + esc(p.handle) + '">' + esc(p.handle) + '</button>'
         + '<span class="when">' + esc(when(p.created_at)) + '</span>'
         + (own ? '<button class="del" data-del="' + p.id + '">delete</button>' : '')
-        + '</div><div class="post-body">' + esc(p.body) + '</div>'
+        + '</div><div class="post-body">' + highlight(p.body, query) + '</div>'
         + reactBar(p) + '</div></article>';
     });
     h += '</div>';
@@ -1011,6 +1075,21 @@ function wire(){
       img.src = url;
     };
   }
+  /* ── searching the feed ── */
+  var sb = $('srch');
+  if (sb){
+    sb.oninput = function(){ query = sb.value; searchFocus = true; render(); };
+    // Typing re-renders the feed, which would otherwise throw the cursor out
+    // of the box after every letter. Put it back where it was.
+    if (searchFocus){
+      searchFocus = false;
+      sb.focus();
+      try { var n = sb.value.length; sb.setSelectionRange(n, n); } catch(e){}
+    }
+  }
+  var sc = $('srchClr');
+  if (sc) sc.onclick = function(){ query = ''; searchFocus = true; render(); };
+
   /* ── mall world drawing ── */
   var mwFile = $('mwFile');
   if (mwFile){
@@ -1145,8 +1224,8 @@ function wire(){
 
 /* ── loaders ─────────────────────────────── */
 function loadFeed(){
-  view = 'feed'; viewing = null;
-  return api('/api/posts?limit=60').then(function(d){
+  view = 'feed'; viewing = null; query = '';
+  return api('/api/posts?limit=300').then(function(d){
     cache.posts = d.posts || []; render();
   }).catch(function(){ cache.posts = []; render(); });
 }
