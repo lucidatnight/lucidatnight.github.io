@@ -291,6 +291,33 @@ label.ghost{display:inline-block}
 .mw h2{font-family:var(--type);font-size:38px;font-weight:400;line-height:1.2;margin:16px 0 22px;color:var(--lunar);text-wrap:balance}
 .mw-lead{font-size:16px;color:var(--dream);line-height:1.75;max-width:56ch}
 .mw-list{list-style:none;margin:40px 0 36px}
+/* mini games */
+.gcard{
+  display:flex;align-items:center;gap:22px;margin-top:26px;padding:24px 26px;
+  background:var(--deep);border:1px solid var(--edge);border-radius:3px;
+  text-decoration:none;transition:border-color .25s,background .25s;
+}
+.gcard:hover{border-color:rgba(168,155,200,.4);background:#0b0b12}
+.gcard:focus-visible{outline:1px solid var(--pulse);outline-offset:3px}
+.gart{flex:none;width:64px}
+.gart svg{width:100%;height:auto;display:block}
+.gtext{display:flex;flex-direction:column;gap:7px;min-width:0;flex:1}
+.gname{font-family:var(--type);font-size:22px;color:var(--lunar);line-height:1.2}
+.gdesc{font-size:14px;color:var(--dream);line-height:1.7;max-width:52ch}
+.gmeta{font-size:12.5px;color:var(--gold);line-height:1.6}
+.gplay{
+  flex:none;font-size:11px;font-weight:600;letter-spacing:.2em;text-transform:uppercase;
+  color:var(--night);background:var(--dream);border-radius:2px;padding:13px 22px;
+}
+.gcard:hover .gplay{background:var(--pulse)}
+.gnote{font-size:13px;color:var(--glow);line-height:1.7;margin-top:26px}
+@media (max-width:620px){
+  .gcard{flex-wrap:wrap;gap:16px}
+  .gart{width:48px}
+  .gtext{flex:1 1 60%}
+  .gplay{width:100%;text-align:center}
+}
+
 /* tonight — what everyone is dreaming about */
 .pl-head{font-family:var(--type);font-size:32px;font-weight:400;line-height:1.2;color:var(--lunar);margin:6px 0 14px}
 .pl-lead{font-size:15px;color:var(--dream);line-height:1.75;max-width:56ch;margin-bottom:34px}
@@ -408,10 +435,10 @@ var MAX_POST = 600, MAX_BIO = 160, MAX_CONTACT = 80;
 var DONATE_URL = '';
 
 var me = null;            // signed-in user, or null
-var view = 'landing';     // landing | feed | mall | key | profile | settings | donate
+var view = 'landing';     // landing | feed | mall | key | games | profile | settings | donate
 var viewing = null;       // handle being looked at
 var flash = null;         // {t:'err'|'ok', m:string}
-var cache = { posts: [], profile: null, encounters: null, submissions: null, pulse: null };
+var cache = { posts: [], profile: null, encounters: null, submissions: null, pulse: null, sheep: null };
 // Held outside the DOM so a re-render does not lose a picked drawing.
 var mwDrawing = null;
 // What is typed in the feed's search box, and whether it should keep focus
@@ -875,6 +902,56 @@ function landing(){
   return h;
 }
 
+/* ── mini games ───────────────────────────
+   Somewhere to put the things that are not the journal. A game does not belong
+   in the middle of a feed of other people's dreams, and the reason for having
+   one at all is the hour it is aimed at: awake at three, not wanting to read.
+
+   Each game is its own page rather than a view in here. They are canvas games
+   with their own loop; folding one into this file would mean it kept running,
+   or kept having to be torn down, every time somebody opened their profile. */
+function sheepBest(){
+  // Shared with the game: same site, same browser, same key.
+  try { return Math.max(0, Number(localStorage.getItem('lucid_sheep_best')) || 0); } catch(e){ return 0; }
+}
+
+function gamesView(){
+  var b = cache.sheep;
+  var mine = Math.max(sheepBest(), (b && b.you && b.you.best) || 0);
+  var leader = b && b.top && b.top.length ? b.top[0] : null;
+
+  var line = '';
+  if (mine && leader && leader.best > mine)      line = 'Your best is ' + mine + '. ' + esc(leader.handle) + ' leads with ' + leader.best + '.';
+  else if (mine && leader && leader.best <= mine) line = 'Your best is ' + mine + ', and nobody has beaten it.';
+  else if (mine)                                  line = 'Your best is ' + mine + '.';
+  else if (leader)                                line = esc(leader.handle) + ' leads with ' + leader.best + '.';
+  else if (b)                                     line = 'Nobody has counted a sheep yet.';
+
+  return flashHTML()
+    + '<div class="pl-head">Can\'t sleep?</div>'
+    + '<p class="g-lead">Try some of our mini games.</p>'
+
+    + '<a class="gcard" href="sheep.html">'
+    +   '<span class="gart" aria-hidden="true">'
+    +     '<svg viewBox="-8 -6 48 32"><circle cx="12" cy="14" r="7" fill="#e8e4f0"/>'
+    +     '<circle cx="20" cy="11" r="8" fill="#e8e4f0"/><circle cx="27" cy="14" r="7" fill="#e8e4f0"/>'
+    +     '<ellipse cx="7" cy="12" rx="5" ry="4" fill="#b9b1d2"/>'
+    +     '<ellipse cx="9" cy="7" rx="2.4" ry="1.5" fill="#b9b1d2"/>'
+    +     '<circle cx="4.5" cy="11.5" r="1" fill="#2a2540"/></svg>'
+    +   '</span>'
+    +   '<span class="gtext">'
+    +     '<span class="gname">Counting Sheep</span>'
+    +     '<span class="gdesc">They come over the fence one at a time and you count them as they '
+    +       'go. Some of them are wolves wearing fleece. Miss one, or count a wolf, and you lose '
+    +       'a little of your attention — three lapses and the night is over.</span>'
+    +     (line ? '<span class="gmeta">' + line + '</span>' : '')
+    +   '</span>'
+    +   '<span class="gplay">Play</span>'
+    + '</a>'
+
+    + '<p class="gnote">More to come. If you have an idea for one, put it on the feed.</p>';
+}
+
 /* ── signed-in app ───────────────────────── */
 function topbar(){
   var h = '<div class="topbar"><div class="wordmark">Lucid<span class="d">.</span></div><nav class="nav">'
@@ -883,6 +960,7 @@ function topbar(){
   h += '<button data-v="pulse" class="' + (view==='pulse'?'on':'') + '">Tonight</button>';
   h += '<button data-v="guide" class="' + (view==='guide'?'on':'') + '">How To</button>';
   h += '<button data-v="mall" class="' + (view==='mall'?'on':'') + '">Mall World</button>';
+  h += '<button data-v="games" class="' + (view==='games'?'on':'') + '">Mini Games</button>';
   h += me
     ? '<button data-v="profile" class="' + (view==='profile'&&!viewing?'on':'') + '">' + esc(me.handle) + '</button>'
       + '<button id="topSignout" title="Sign out" aria-label="Sign out">Sign out</button>'
@@ -1144,6 +1222,7 @@ function render(){
       : view === 'pulse' ? pulseView()
       : view === 'guide' ? guideView()
       : view === 'mall' ? mallWorld(true)
+      : view === 'games' ? gamesView()
       : view === 'donate' ? support(true)
       : view === 'settings' ? settingsView() : feedView();
     app.innerHTML = '<div class="shell">' + topbar() + body
@@ -1212,6 +1291,7 @@ function wire(){
       if (v === 'settings'){ view = 'settings'; render(); window.scrollTo(0,0); return; }
       if (v === 'mall'){ view = 'mall'; render(); window.scrollTo(0,0); loadSubmissions(); return; }
       if (v === 'pulse'){ view = 'pulse'; render(); window.scrollTo(0,0); loadPulse(); return; }
+      if (v === 'games'){ view = 'games'; render(); window.scrollTo(0,0); loadSheep(); return; }
       view = v; render();
     };
   });
@@ -1506,6 +1586,15 @@ function loadPulse(){
     .then(function(d){ cache.pulse = d; if (view === 'pulse') render(); })
     .catch(function(){ cache.pulse = { window:{ enough:false, total:0, authors:0 } };
                        if (view === 'pulse') render(); });
+}
+
+/* The sheep board, only to put a line on the games page. It is allowed to fail
+   without saying anything: the browser knows your own best on its own, and a
+   game you can play is not worth an error message about a scoreboard. */
+function loadSheep(){
+  return api('/api/sheep')
+    .then(function(d){ cache.sheep = d; if (view === 'games') render(); })
+    .catch(function(){});
 }
 
 function loadSubmissions(){
