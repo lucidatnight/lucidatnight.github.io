@@ -831,19 +831,30 @@ function mwSubmit(){
     + mine + '</div>';
 }
 
+/* The headline counts the people who are actually here. Until the API answers
+   it says the same sentence without the number — never a nought, and never a
+   gap where a number should be. loadStats fills it in when the count lands,
+   because the landing page is drawn before that request comes back. */
+function supportHead(){
+  var n = stats && typeof stats.dreamers === 'number' ? stats.dreamers : null;
+  return n && n > 1
+    ? n.toLocaleString() + ' people are writing their dreams down here.'
+    : 'People are writing their dreams down here.';
+}
+
 function support(inApp){
   var open = !!DONATE_URL;
   return '<section class="sup' + (inApp?' inapp':'') + '" id="support"><div class="sup-inner">'
     + '<div class="eyebrow">Support</div>'
-    + '<h2>Lucid runs on a computer in a spare room.</h2>'
-    + '<p class="sup-lead">That is not a figure of speech. There is a machine in a house, and when the power '
-    + 'goes out, so does this. It costs very little to run right now, which is exactly why it is worth being '
-    + 'straight with you about where money would go.</p>'
+    + '<h2>' + esc(supportHead()) + '</h2>'
+    + '<p class="sup-lead">Lucid opened a few weeks ago with nobody on it. It is free, it is not going behind '
+    + 'a paywall, and it will never carry advertising — your dreams are not for sale, and that is a decision '
+    + 'rather than a stage it is going through. Keeping it that way costs something. Here is exactly what.</p>'
     + '<ul class="sup-list">'
-    + '<li>A domain, backups, and the electricity to keep it awake.</li>'
-    + '<li>A real server, for when the one in the spare room stops being enough.</li>'
-    + '<li>The Mall World map. Collecting the drawings, comparing them, building the thing.</li>'
-    + '<li>Staying ad-free. No advertising here, and your dreams are not for sale.</li>'
+    + '<li>The server, and backups, so that nothing anybody writes here can be lost.</li>'
+    + '<li>A proper domain, so the address belongs to Lucid.</li>'
+    + '<li>Mall World. Collecting the drawings, comparing the accounts, building the map.</li>'
+    + '<li>Room to grow, so it stays quick as more people arrive.</li>'
     + '</ul>'
     + (open
         ? '<a class="sup-cta" href="' + esc(DONATE_URL) + '" target="_blank" rel="noopener noreferrer">Give something</a>'
@@ -1555,7 +1566,7 @@ function wire(){
       .then(function(){
         setToken(null);
         me = null; view = 'landing'; viewing = null;
-        cache = { posts:[], profile:null, encounters:null, submissions:null, pulse:null };
+        cache = { posts:[], profile:null, encounters:null, submissions:null, pulse:null, sheep:null };
         render(); loadStats();
       });
   }
@@ -1627,6 +1638,11 @@ function loadStats(){
       }
       var st = document.getElementById('feedstat');
       if (st) fillStat(st);
+      // The Support headline is already on the page by the time this answers.
+      // Written straight into the heading rather than re-rendering, so that a
+      // half-typed sign-in form underneath it is not thrown away.
+      var sh = document.querySelector('#support h2');
+      if (sh) sh.textContent = supportHead();
     })
     .catch(function(){ /* a missing count is not worth an error message */ });
 }
