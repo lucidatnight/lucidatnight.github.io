@@ -289,6 +289,19 @@ label.ghost{display:inline-block}
 .mw h2{font-family:var(--type);font-size:38px;font-weight:400;line-height:1.2;margin:16px 0 22px;color:var(--lunar);text-wrap:balance}
 .mw-lead{font-size:16px;color:var(--dream);line-height:1.75;max-width:56ch}
 .mw-list{list-style:none;margin:40px 0 36px}
+/* tonight — what everyone is dreaming about */
+.pl-head{font-family:var(--type);font-size:32px;font-weight:400;line-height:1.2;color:var(--lunar);margin:6px 0 14px}
+.pl-lead{font-size:15px;color:var(--dream);line-height:1.75;max-width:56ch;margin-bottom:34px}
+.pl-group{margin-bottom:34px}
+.pl-group h4{font-size:10px;letter-spacing:.22em;text-transform:uppercase;color:var(--glow);font-weight:500;margin-bottom:16px}
+.pl-row{display:flex;align-items:center;gap:14px;padding:9px 0}
+.pl-name{font-family:var(--type);font-size:16px;color:#ded8ec;flex:none;width:9.5em}
+.pl-bar{flex:1;height:7px;background:var(--mist);border-radius:99px;overflow:hidden}
+.pl-bar i{display:block;height:100%;background:linear-gradient(90deg,var(--glow),var(--pulse));border-radius:99px}
+.pl-n{font-size:12px;color:var(--glow);flex:none;width:3.5em;text-align:right;font-variant-numeric:tabular-nums}
+.pl-none{border-left:2px solid var(--edge);padding:6px 0 6px 24px;font-size:15px;color:var(--glow);line-height:1.78;max-width:56ch}
+.pl-foot{font-size:12.5px;color:var(--glow);line-height:1.7;margin-top:34px;padding-top:22px;border-top:1px solid var(--edge);max-width:60ch}
+@media(max-width:560px){ .pl-name{width:7.5em;font-size:14.5px} }
 .mw-list li{font-family:var(--type);font-size:17px;line-height:1.6;color:#ded8ec;padding:16px 0 16px 28px;position:relative;border-top:1px solid var(--edge)}
 .mw-list li::before{content:"";position:absolute;left:2px;top:25px;width:10px;height:1px;background:var(--gold)}
 .mw-theory{border-left:2px solid var(--edge);padding:6px 0 6px 24px;margin-bottom:48px;font-size:15px;color:var(--glow);line-height:1.78;max-width:58ch}
@@ -375,7 +388,7 @@ var me = null;            // signed-in user, or null
 var view = 'landing';     // landing | feed | mall | key | profile | settings | donate
 var viewing = null;       // handle being looked at
 var flash = null;         // {t:'err'|'ok', m:string}
-var cache = { posts: [], profile: null, encounters: null, submissions: null };
+var cache = { posts: [], profile: null, encounters: null, submissions: null, pulse: null };
 // Held outside the DOM so a re-render does not lose a picked drawing.
 var mwDrawing = null;
 // What is typed in the feed's search box, and whether it should keep focus
@@ -508,6 +521,67 @@ function moonSVG(){
 }
 
 /* ── mall world (shared by both states) ──── */
+/* What everyone is dreaming about. The one page here that no other site could
+   publish, because no other site has these dreams. Counts only — nothing
+   anybody wrote is quoted, and the server refuses to answer at all until
+   there are enough dreams from enough people that a count is not a finger
+   pointing at one person. */
+function pulseView(){
+  var h = flashHTML();
+  var d = cache.pulse;
+
+  h += '<div class="pl-head">Tonight.</div>';
+
+  if (!d){
+    h += '<p class="pl-lead">Counting…</p>';
+    return h;
+  }
+
+  var w = d.window || {};
+
+  if (!w.enough){
+    h += '<p class="pl-lead">What everyone here is dreaming about, counted from the words '
+      + 'people actually wrote.</p>'
+      + '<div class="pl-none">Not enough dreams yet to say anything true. '
+      + 'This page opens at <b>' + (w.needPosts || 8) + ' dreams</b> from at least '
+      + '<b>' + (w.needAuthors || 3) + ' people</b> — so far there are ' + (w.total || 0)
+      + ' from ' + (w.authors || 0) + '. Below that, a count is not a pattern, '
+      + 'it is a way of pointing at whoever wrote it.</div>'
+      + '<p class="pl-foot">Nothing on this page will ever name anyone or quote a dream. '
+      + 'It only ever counts.</p>';
+    return h;
+  }
+
+  h += '<p class="pl-lead">' + w.total + ' dreams written here in the last ' + d.days
+    + ' days, by ' + w.authors + ' people who have never met. '
+    + 'This is what they keep coming back to.</p>';
+
+  function group(title, rows){
+    if (!rows || !rows.length) return '';
+    var top = rows[0].n || 1;
+    return '<div class="pl-group"><h4>' + title + '</h4>'
+      + rows.map(function(r){
+          return '<div class="pl-row"><span class="pl-name">' + esc(r.label) + '</span>'
+            + '<span class="pl-bar"><i style="width:' + Math.round(r.n / top * 100) + '%"></i></span>'
+            + '<span class="pl-n">' + r.n + '</span></div>';
+        }).join('')
+      + '</div>';
+  }
+
+  h += group('Places', w.places) + group('People', w.people) + group('What happens', w.themes);
+
+  if (w.mall)  h += '<div class="pl-none" style="margin-bottom:18px"><b>' + w.mall + '</b> of those '
+    + (w.mall === 1 ? 'dream mentions' : 'dreams mention') + ' a mall.</div>';
+  if (w.lucid) h += '<div class="pl-none"><b>' + w.lucid + '</b> '
+    + (w.lucid === 1 ? 'describes' : 'describe') + ' knowing it was a dream while it was happening.</div>';
+
+  h += '<p class="pl-foot">Counted by matching words against a fixed list. '
+    + 'It is arithmetic, not interpretation, and it says nothing about what any '
+    + 'of it means. No dream is quoted here and nobody is named — a word only '
+    + 'appears once it has turned up in at least two different dreams.</p>';
+  return h;
+}
+
 function mallWorld(inApp){
   return '<section class="mw'+(inApp?' inapp':'')+'" id="mallworld"><div class="mw-inner">'
     + '<div class="eyebrow">The shared dream</div>'
@@ -670,6 +744,7 @@ function topbar(){
   var h = '<div class="topbar"><div class="wordmark">Lucid<span class="d">.</span></div><nav class="nav">'
     + '<button data-v="feed" class="' + (view==='feed'?'on':'') + '">Feed</button>';
   if (me) h += '<button data-v="key" class="' + (view==='key'?'on':'') + '">Your Key</button>';
+  h += '<button data-v="pulse" class="' + (view==='pulse'?'on':'') + '">Tonight</button>';
   h += '<button data-v="mall" class="' + (view==='mall'?'on':'') + '">Mall World</button>';
   h += me
     ? '<button data-v="profile" class="' + (view==='profile'&&!viewing?'on':'') + '">' + esc(me.handle) + '</button>'
@@ -912,6 +987,7 @@ function render(){
     if (!me && (view === 'key' || view === 'settings')) view = 'feed';
     var body = view === 'profile' ? profileView()
       : view === 'key' ? keyView()
+      : view === 'pulse' ? pulseView()
       : view === 'mall' ? mallWorld(true)
       : view === 'donate' ? support(true)
       : view === 'settings' ? settingsView() : feedView();
@@ -980,6 +1056,7 @@ function wire(){
       if (v === 'key') return loadEncounters();
       if (v === 'settings'){ view = 'settings'; render(); window.scrollTo(0,0); return; }
       if (v === 'mall'){ view = 'mall'; render(); window.scrollTo(0,0); loadSubmissions(); return; }
+      if (v === 'pulse'){ view = 'pulse'; render(); window.scrollTo(0,0); loadPulse(); return; }
       view = v; render();
     };
   });
@@ -1230,7 +1307,7 @@ function wire(){
       .then(function(){
         setToken(null);
         me = null; view = 'landing'; viewing = null;
-        cache = { posts:[], profile:null, encounters:null, submissions:null };
+        cache = { posts:[], profile:null, encounters:null, submissions:null, pulse:null };
         render(); loadStats();
       });
   }
@@ -1254,6 +1331,15 @@ function loadEncounters(){
     cache.encounters = d.encounters || []; render();
   }).catch(function(){ cache.encounters = []; render(); });
 }
+/* Public — no account needed to look at it. */
+function loadPulse(){
+  return fetch(API + '/api/pulse?days=30&x=' + Date.now())
+    .then(function(r){ return r.json(); })
+    .then(function(d){ cache.pulse = d; if (view === 'pulse') render(); })
+    .catch(function(){ cache.pulse = { window:{ enough:false, total:0, authors:0 } };
+                       if (view === 'pulse') render(); });
+}
+
 function loadSubmissions(){
   if (!me) return Promise.resolve();
   return api('/api/mallworld').then(function(d){
