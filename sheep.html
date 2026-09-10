@@ -83,6 +83,20 @@ body{
 }
 canvas{grid-area:1/1;align-self:center;display:block;width:100%;height:auto;touch-action:manipulation}
 
+/* The end of a round is the one moment somebody is definitely looking at
+   this page and has just finished doing something. It sits beside Again as
+   a link, not a second button: the game is what they came for, and a bright
+   ask next to it would read as the price of playing. */
+.endrow{display:flex;align-items:center;justify-content:center;gap:20px;flex-wrap:wrap}
+.give{
+  font-family:var(--sans);font-size:11px;font-weight:600;letter-spacing:.2em;
+  text-transform:uppercase;color:var(--glow);text-decoration:none;
+  border-bottom:1px solid rgba(168,155,200,.3);padding-bottom:3px;
+  transition:color .2s,border-color .2s;
+}
+.give:hover{color:var(--pulse);border-color:var(--pulse)}
+.give:focus-visible{outline:2px solid var(--pulse);outline-offset:3px}
+
 /* a line of text that drifts across the field now and then */
 .murmur{
   position:absolute;left:0;right:0;top:38%;text-align:center;pointer-events:none;
@@ -188,7 +202,10 @@ canvas{grid-area:1/1;align-self:center;display:block;width:100%;height:auto;touc
         <span class="best"><b id="myBest">0</b><span>your best</span></span>
         <span class="best quiet"><b id="topBest">—</b><span id="topWho">top score</span></span>
       </div>
-      <button class="btn" id="go">Begin</button>
+      <div class="endrow">
+        <button class="btn" id="go">Begin</button>
+        <a class="give" id="give" href="https://lucidatnight.com/#support" hidden>Support Lucid</a>
+      </div>
       <p class="small" id="vs">Three lapses and the night is over.</p>
     </div>
   </div>
@@ -220,6 +237,7 @@ canvas{grid-area:1/1;align-self:center;display:block;width:100%;height:auto;touc
   var vp = document.getElementById('vp');
   var vs = document.getElementById('vs');
   var vrules = document.getElementById('vrules');
+  var giveEl = document.getElementById('give');
   var goBtn = document.getElementById('go');
   var bestsEl = document.getElementById('bests');
   var myBestEl = document.getElementById('myBest');
@@ -529,6 +547,7 @@ canvas{grid-area:1/1;align-self:center;display:block;width:100%;height:auto;touc
       ? 'Your best yet. Whatever you dream tonight, write it down before it goes.'
       : 'Whatever you dream tonight, write it down before it goes.';
     vrules.hidden = true;
+    giveEl.hidden = false;
     goBtn.textContent = 'Again';
     veil.hidden = false;
 
@@ -538,6 +557,7 @@ canvas{grid-area:1/1;align-self:center;display:block;width:100%;height:auto;touc
   function start() {
     reset();
     vrules.hidden = false;
+    giveEl.hidden = true;
     veil.hidden = true;
     state = 'playing';
     last = performance.now();

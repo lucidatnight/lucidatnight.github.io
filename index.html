@@ -464,6 +464,19 @@ var DONATE_URL = 'https://ko-fi.com/lucidatnight';
 
 var me = null;            // signed-in user, or null
 var view = 'landing';     // landing | feed | mall | key | games | profile | settings | donate
+
+/* Something outside the site can ask for the Support page by name —
+   lucidatnight.com/#support — which is how the end of the sheep game gets
+   here. The hash is read once and then wiped from the address bar, so a
+   reload or a shared link does not keep dragging people back to the ask. */
+var wantSupport = false;
+try {
+  if (/^#(support|donate)$/i.test(location.hash)) {
+    wantSupport = true;
+    view = 'donate';
+    if (history.replaceState) history.replaceState(null, '', location.pathname);
+  }
+} catch (e) {}
 var viewing = null;       // handle being looked at
 var flash = null;         // {t:'err'|'ok', m:string}
 var cache = { posts: [], profile: null, encounters: null, submissions: null, pulse: null, sheep: null };
@@ -1896,7 +1909,9 @@ render();
 countVisit();
 loadStats();
 api('/api/me').then(function(d){
-  if (d.user){ me = d.user; loadFeed(); }
+  // loadFeed sets the view, so a signed-in arrival would otherwise be
+  // bounced off the page the link asked for.
+  if (d.user){ me = d.user; wantSupport ? render() : loadFeed(); }
 }).catch(function(){ /* landing is already on screen; the banner explains it */ });
 
 })();
