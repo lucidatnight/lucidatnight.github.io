@@ -154,6 +154,26 @@ button:focus-visible,a:focus-visible,input:focus-visible,textarea:focus-visible{
 .av.l{width:88px;height:88px;font-size:32px}
 
 .composer textarea{min-height:104px;resize:vertical;font-family:var(--type);font-size:17px;font-weight:400;line-height:1.72}
+/* The composer, closed. One line, the same width and edge as the card it
+   becomes, so opening it reads as the same object growing rather than a
+   different one appearing. */
+.writebar{
+  display:flex;align-items:center;justify-content:space-between;gap:18px;width:100%;
+  background:var(--deep);border:1px solid var(--edge);border-radius:3px;
+  padding:21px 24px;text-align:left;font:inherit;cursor:pointer;
+  transition:border-color .25s;
+}
+.writebar:hover{border-color:rgba(168,155,200,.4)}
+.wb-q{font-family:var(--type);font-size:17px;line-height:1.4;color:var(--glow);transition:color .25s}
+.writebar:hover .wb-q{color:var(--dream)}
+.writebar.has .wb-q{color:var(--gold)}
+.wb-go{flex:none;font-size:10px;font-weight:600;letter-spacing:.2em;text-transform:uppercase;color:var(--dream);transition:color .25s}
+.writebar:hover .wb-go{color:var(--pulse)}
+.crow{display:flex;align-items:center;gap:18px}
+.cclose{background:none;border:none;padding:6px 0;cursor:pointer;font-family:var(--sans);
+  font-size:10px;font-weight:500;letter-spacing:.18em;text-transform:uppercase;color:var(--glow);transition:color .2s}
+.cclose:hover{color:var(--dream)}
+@media (max-width:520px){ .writebar{padding:18px 16px} .wb-q{font-size:15.5px} }
 .count{font-size:11px;color:var(--glow);font-variant-numeric:tabular-nums;letter-spacing:.06em}
 .count.warn{color:var(--gold)}
 .count.over{color:var(--error)}
@@ -537,6 +557,20 @@ var mwDrawing = null;
 // What is typed in the feed's search box, and whether it should keep focus
 // through the re-render that typing causes.
 var query = '', searchFocus = false;
+
+/* The composer.
+ *
+ * Most people arriving here are reading, not writing, and a box demanding
+ * "What did you see?" above every visit is a question asked of somebody who
+ * came to listen. So it starts as one line and opens when it is wanted.
+ *
+ * composerDraft exists because the feed re-renders on every keystroke in the
+ * search box. Without somewhere to keep it, half a dream would disappear the
+ * moment somebody searched for a word to check they were not repeating
+ * themselves. It survives closing the box too — the collapsed line says so,
+ * so nobody has to wonder whether their words are still there.
+ */
+var composerOpen = false, composerDraft = '', composerFocus = false;
 
 /* Every word has to appear somewhere in the dream, or in who wrote it.
    This filters what is displayed. It does not touch the database, and it
@@ -1453,12 +1487,21 @@ function feedView(){
       + 'or to answer someone else\'s, you need a name here.</p>'
       + '<button class="btn" data-v="landing">Join</button></div>';
   } else {
-    h += '<div class="card composer"><label class="fl" for="composer">What did you see?</label>'
-      + '<textarea id="composer" maxlength="' + MAX_POST + '" placeholder="A room. A face. The thing you could not explain."></textarea>'
-      + '<div class="spread" style="margin-top:16px"><span class="count" id="count">0 / ' + MAX_POST + '</span>'
-      + '<button class="btn" id="postBtn" disabled>Post dream</button></div>'
-      + '<p class="hint" style="margin-top:14px">A fragment is enough. One room, one face, one feeling. '
-      + 'Most of what survives waking up is not a story.</p></div>';
+    if (!composerOpen){
+      var held = composerDraft.trim().length;
+      h += '<button class="writebar' + (held ? ' has' : '') + '" id="openComposer">'
+        + '<span class="wb-q">' + (held ? 'Your dream is still here, unposted.' : 'What did you see?') + '</span>'
+        + '<span class="wb-go">' + (held ? 'Finish it' : 'Write') + '</span></button>';
+    } else {
+      h += '<div class="card composer"><label class="fl" for="composer">What did you see?</label>'
+        + '<textarea id="composer" maxlength="' + MAX_POST + '" placeholder="A room. A face. The thing you could not explain.">'
+        + esc(composerDraft) + '</textarea>'
+        + '<div class="spread" style="margin-top:16px"><span class="count" id="count">0 / ' + MAX_POST + '</span>'
+        + '<span class="crow"><button class="cclose" id="closeComposer">Not now</button>'
+        + '<button class="btn" id="postBtn" disabled>Post dream</button></span></div>'
+        + '<p class="hint" style="margin-top:14px">A fragment is enough. One room, one face, one feeling. '
+        + 'Most of what survives waking up is not a story.</p></div>';
+    }
   }
 
   h += '<div class="statline" id="feedstat"></div>';
@@ -1867,6 +1910,16 @@ function wire(){
     };
   });
 
+  var ob = $('openComposer');
+  if (ob) ob.onclick = function(){ composerOpen = true; composerFocus = true; render(); };
+  var cb = $('closeComposer');
+  // Closing keeps the words. The collapsed line then says so, which is the
+  // whole reason it is safe to offer a way out of the box at all.
+  if (cb) cb.onclick = function(){
+    var t = $('composer'); if (t) composerDraft = t.value;
+    composerOpen = false; render();
+  };
+
   var ta = $('composer'), pb = $('postBtn'), ct = $('count');
   if (ta && pb){
     var tick = function(){
@@ -1875,7 +1928,15 @@ function wire(){
       ct.className = 'count' + (n > MAX_POST ? ' over' : n > MAX_POST - 100 ? ' warn' : '');
       pb.disabled = n === 0 || n > MAX_POST;
     };
-    ta.oninput = tick; tick();
+    // Every keystroke in the search box re-renders the feed. Keep the draft
+    // somewhere that survives that, or searching mid-sentence eats the sentence.
+    ta.oninput = function(){ composerDraft = ta.value; tick(); };
+    tick();
+    if (composerFocus){
+      composerFocus = false;
+      ta.focus();
+      try { var n = ta.value.length; ta.setSelectionRange(n, n); } catch(e){}
+    }
     pb.onclick = function(){
       var text = ta.value.trim();
       pb.disabled = true; pb.textContent = 'Posting';
@@ -1883,12 +1944,20 @@ function wire(){
         // care comes back true when what they wrote reads like it is about
         // them rather than about a dream. Shown to them, once, and to nobody
         // else — see the note on soundsLikeCrisis in the server.
-        .then(function(d){ if (d && d.care) showCare(); loadFeed(); })
+        .then(function(d){
+          // Posted and safely on the server: the box has done its job and
+          // folds away. Only clear the draft once it is somebody else's copy.
+          composerDraft = ''; composerOpen = false;
+          if (d && d.care) showCare();
+          loadFeed();
+        })
         .catch(function(err){
+          // It did not send. The box stays open with every word in it —
+          // collapsing here would look exactly like losing their dream.
+          composerDraft = text; composerOpen = true;
           flash = { t:'err', m: err.message === 'offline'
             ? 'That did not send. Your words are still in the box below.' : err.message };
           render();
-          var t2 = $('composer'); if (t2) t2.value = text;
         });
     };
   }
