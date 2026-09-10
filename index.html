@@ -1874,7 +1874,16 @@ function wire(){
           if (!on && at > -1) cache.dreams.mine.splice(at, 1);
           render();
         })
-        .catch(function(){ b.classList.toggle('on', !on); });
+        // Put the button back, and say so. Silently reverting is how a broken
+        // server looks exactly like a broken button — which is precisely what
+        // happened the first time this shipped.
+        .catch(function(err){
+          b.classList.toggle('on', !on);
+          flash = { t:'err', m: err && err.message === 'offline'
+            ? 'That did not save — you are offline.'
+            : 'That did not save. Nothing was counted.' };
+          render();
+        });
     };
   });
 
