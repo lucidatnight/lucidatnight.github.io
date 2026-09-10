@@ -1,4 +1,10 @@
 <meta charset="utf-8">
+<!-- Without this a phone lays the page out at 980px and then zooms the whole
+     thing out to fit, which made the sheep and the board too small to read and
+     put every tap through a scale factor. The artifact preview supplies its own
+     viewport tag, so the page looked right everywhere except the real site. -->
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#07070c">
 <title>Counting Sheep</title>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap">
 <style>
@@ -282,7 +288,11 @@ canvas{grid-area:1/1;align-self:center;display:block;width:100%;height:auto;touc
   }
 
   function paintBoard() {
-    var signedIn = !!token();
+    // The board coming back with a "you" on it is proof of a session, whatever
+    // the page can or cannot find in its own storage. Telling somebody the
+    // server has already named to sign in is the sort of thing that makes a
+    // site feel broken.
+    var signedIn = !!token() || !!(board && board.you);
 
     if (!board) {
       browsEl.innerHTML = '<p class="bempty">' +
@@ -329,7 +339,14 @@ canvas{grid-area:1/1;align-self:center;display:block;width:100%;height:auto;touc
 
   function loadBoard() {
     var t = token();
-    fetch(API + '/api/sheep', { headers: t ? { Authorization: 'Bearer ' + t } : {} })
+    // credentials go too. The bearer token lives in localStorage, which is
+    // per-origin: everybody signed in on lucidatnight.github.io lost theirs
+    // the day the site moved to lucidatnight.com. The session cookie survived
+    // that move, so sending it is what keeps those people signed in here.
+    fetch(API + '/api/sheep', {
+      credentials: 'include',
+      headers: t ? { Authorization: 'Bearer ' + t } : {}
+    })
       // Anything other than a board is treated the same as no answer at all,
       // so the page says the board is out of reach instead of sitting on
       // "Fetching…" forever.
@@ -348,12 +365,17 @@ canvas{grid-area:1/1;align-self:center;display:block;width:100%;height:auto;touc
     keepBest(score);
     paintBests();
 
+    // No early return on a missing token. Whether this round counts is the
+    // server's call, not the page's — it accepts a cookie as readily as a
+    // bearer token, and a signed-out round is simply refused and ignored.
     var t = token();
-    if (!t) { paintBoard(); return; }
+    var headers = { 'Content-Type': 'application/json' };
+    if (t) headers.Authorization = 'Bearer ' + t;
 
     fetch(API + '/api/sheep', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + t },
+      credentials: 'include',
+      headers: headers,
       body: JSON.stringify({ score: score, ms: ms })
     })
       .then(function (r) { return r.ok ? r.json() : null; })
