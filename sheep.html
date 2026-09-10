@@ -390,7 +390,37 @@ canvas{grid-area:1/1;align-self:center;display:block;width:100%;height:auto;touc
   /* The field is drawn in a fixed coordinate space and scaled to whatever
      width the page gives it, so the sheep are the same size on a phone as on
      a laptop and nothing has to be recalculated on resize. */
-  var W = 1480, H = 620;
+  /* A phone gets a narrower field than a laptop.
+   *
+   * One fixed 1480x620 rectangle scaled to the page width is a calm wide view
+   * on a laptop. On a 390px phone the same rectangle arrives about 350x147 —
+   * a letterbox slot with sheep the size of a fingernail. The canvas cannot be
+   * made bigger than the screen, so the answer is to put LESS FIELD in it:
+   * same height, less width, and everything in it is drawn larger relative to
+   * the glass.
+   *
+   * That trade costs warning time — a narrower field means a sheep is visible
+   * for a shorter distance before it reaches the fence. So the speed is scaled
+   * by the distance as well. A sheep takes the same number of seconds to cross
+   * on a phone as on a laptop, the spawn schedule is untouched, and a round
+   * played on either is the same round. That last part matters beyond feel:
+   * the server checks a score against the spawn schedule to see whether it was
+   * humanly possible, and a phone that played faster would fail that check.
+   *
+   * Chosen once at load. Rotating the phone mid-round does not rebuild the
+   * world underneath you.
+   */
+  var WIDE = 1480, NARROW = 820;
+  var W = (window.innerWidth || WIDE) < 620 ? NARROW : WIDE;
+  var H = 620;
+  var PACE = (W + 200) / (WIDE + 200);   // same seconds to cross, whatever the width
+
+  /* The element's width/height attributes ARE the drawing surface — the CSS
+     width:100% only stretches that surface to the page afterwards. Both have
+     to agree with W, or the field is drawn at one size and shown at another. */
+  cv.width = W;
+  cv.height = H;
+
   var GROUND = H * 0.70;          // where the sheep walk
   var FENCE_X = W * 0.40;         // they jump here
   var FENCE_TOP = 64;             // how far the rails stand above the ground
@@ -429,7 +459,7 @@ canvas{grid-area:1/1;align-self:center;display:block;width:100%;height:auto;touc
   ];
   var saidUpTo = -1;
 
-  function speed()  { return 2.4 + Math.min(counted * 0.035, 3.4); }
+  function speed()  { return (2.4 + Math.min(counted * 0.035, 3.4)) * PACE; }
   function gap()    { return Math.max(560, 1500 - counted * 22); }
   function wolfChance()  { return Math.min(0.06 + counted * 0.006, 0.26); }
 
