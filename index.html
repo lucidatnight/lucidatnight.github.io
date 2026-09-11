@@ -411,6 +411,23 @@ label.ghost{display:inline-block}
 .dbeen.on:hover{background:var(--pulse);border-color:var(--pulse)}
 .dcount{font-size:12.5px;color:var(--glow);line-height:1.6}
 @media (max-width:520px){ .dbody{padding:18px 16px 20px} .dtitle{font-size:15px} }
+
+/* suggest a dream — the form, and what it becomes once it is sent */
+.sgst{margin-top:46px;padding:26px;border:1px solid var(--edge);border-radius:3px;background:var(--deep)}
+.sgst.sent{border-color:rgba(212,175,106,.32)}
+.sg-h{font-family:var(--type);font-size:19px;line-height:1.3;color:var(--lunar);margin-bottom:8px}
+.sgst.sent .sg-h{color:var(--gold)}
+.sg-p{font-size:13.5px;color:var(--dream);line-height:1.8;max-width:60ch;margin-bottom:16px}
+.sg-ask{color:var(--glow)}
+.sgst textarea{min-height:92px;resize:vertical;font-size:15px;line-height:1.7}
+.sg-row{display:flex;align-items:center;gap:16px;flex-wrap:wrap}
+.sg-back{
+  font-family:var(--sans);font-size:10px;font-weight:600;letter-spacing:.2em;text-transform:uppercase;
+  background:none;color:var(--glow);border:1px solid var(--edge);border-radius:2px;
+  padding:13px 20px;cursor:pointer;transition:color .2s,border-color .2s;
+}
+.sg-back:hover{color:var(--lunar);border-color:var(--glow)}
+@media (max-width:520px){ .sgst{padding:20px 16px} }
 @media (max-width:620px){
   .gcard{flex-wrap:wrap;gap:16px}
   .gart{width:48px}
@@ -1415,7 +1432,43 @@ function dreamsView(){
     h += '</article>';
   }
 
-  return h + '</div>';
+  h += '</div>' + suggestHTML();
+  return h;
+}
+
+/* Suggesting a dream for the page.
+ *
+ * Two states in one box. Before sending it is a form; after sending it is a
+ * thank you that asks for a donation, because the moment somebody has just
+ * given you something for nothing is the only moment asking does not feel
+ * like begging. Nothing is asked for up front.
+ */
+var suggestSent = false, suggestDraft = '', suggestFrom = '';
+
+function suggestHTML(){
+  if (suggestSent){
+    return '<div class="sgst sent">'
+      + '<div class="sg-h">Thank you &mdash; that went straight to me.</div>'
+      + '<p class="sg-p">I read all of these myself. If it belongs on the page, it goes on the page.</p>'
+      + '<p class="sg-p sg-ask">Like Lucid? It is free and it is staying free. It runs on a machine '
+      + 'I pay for, out of my own pocket.</p>'
+      + '<div class="sg-row">'
+      +   '<a class="btn" href="' + DONATE_URL + '" target="_blank" rel="noopener noreferrer">Donate</a>'
+      +   '<button class="sg-back" id="sgBack">Back to Lucid</button>'
+      + '</div></div>';
+  }
+  return '<div class="sgst">'
+    + '<div class="sg-h">A dream that should be here and is not?</div>'
+    + '<p class="sg-p">Tell me which one. Twelve is where this started, not where it ends.</p>'
+    + '<label class="fl" for="sgBody">The dream</label>'
+    + '<textarea id="sgBody" maxlength="700" placeholder="What happens in it, and why you think a lot of people have it.">'
+    + esc(suggestDraft) + '</textarea>'
+    + '<label class="fl" for="sgFrom" style="margin-top:16px">Email, if you want an answer</label>'
+    + '<input type="text" id="sgFrom" maxlength="120" autocomplete="email" value="' + esc(suggestFrom) + '" placeholder="Optional. Only I see it.">'
+    + '<div class="sg-row" style="margin-top:18px">'
+    +   '<button class="btn" id="sgSend" disabled>Send</button>'
+    +   '<span class="count" id="sgCount"></span>'
+    + '</div></div>';
 }
 
 /* The tally, in words. "1 person" reads as a bug next to "84 people". */
@@ -1918,6 +1971,44 @@ function wire(){
         .catch(function(err){ flash = { t:'err', m: err.message }; render(); });
     };
   });
+
+  /* ── suggesting a dream ── */
+  var sgB = $('sgBody'), sgS = $('sgSend'), sgC = $('sgCount');
+  if (sgB && sgS){
+    var sgTick = function(){
+      var n = sgB.value.trim().length;
+      sgC.textContent = n ? n + ' / 700' : '';
+      sgC.className = 'count' + (n > 640 ? ' warn' : '');
+      sgS.disabled = n < 4;
+    };
+    sgB.oninput = function(){ suggestDraft = sgB.value; sgTick(); };
+    sgTick();
+    var sgF = $('sgFrom');
+    if (sgF) sgF.oninput = function(){ suggestFrom = sgF.value; };
+    sgS.onclick = function(){
+      var body = sgB.value.trim(), contact = (sgF && sgF.value) || '';
+      sgS.disabled = true; sgS.textContent = 'Sending';
+      api('/api/suggest', { method:'POST', body:{ body:body, contact:contact.trim() }})
+        .then(function(){
+          suggestSent = true; suggestDraft = ''; suggestFrom = '';
+          render();
+        })
+        .catch(function(err){
+          // Their words stay in the box — held in state, not put back into the
+          // DOM afterwards, so the re-render draws the form already filled and
+          // the Send button is live again on the way past.
+          suggestDraft = body; suggestFrom = contact;
+          flash = { t:'err', m: err.message === 'offline'
+            ? 'That did not send. Your suggestion is still in the box.' : err.message };
+          render();
+        });
+    };
+  }
+  var sgBack = $('sgBack');
+  // Back to the grid, and the form resets so a second suggestion is possible.
+  if (sgBack) sgBack.onclick = function(){
+    suggestSent = false; openDream = null; render(); window.scrollTo(0, 0);
+  };
 
   var ob = $('openComposer');
   if (ob) ob.onclick = function(){ composerOpen = true; composerFocus = true; render(); };
