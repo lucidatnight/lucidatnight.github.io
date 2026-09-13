@@ -6,7 +6,16 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="theme-color" content="#07070c">
 <title>Counting Sheep</title>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap">
+<!-- The typeface does not come from Google any more.
+     Inter was fetched from Google's font servers, which meant every visitor's
+     browser handed Google their IP address and user agent — on every page,
+     before signing up, including someone who only ever reads the front page
+     once and leaves. Lucid stores no IP addresses of its own, so a font was
+     the single thing on this site giving a stranger's address to a company.
+
+     The system face costs nothing, needs no network, and cannot leak anything.
+     The typewriter face is what Lucid actually sounds like, and that one has
+     always been base64 inside this file. -->
 <style>
 @font-face{
   font-family:'Secret Typewriter';
@@ -24,7 +33,7 @@
   --gold:#d4af6a; --error:#e07070;
   --edge:rgba(168,155,200,.16);
   --type:'Secret Typewriter','Courier New',monospace;
-  --sans:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+  --sans:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'Helvetica Neue',Arial,sans-serif;
 }
 *{margin:0;padding:0;box-sizing:border-box}
 /* The browser's own rule for the hidden attribute is display:none, and any
@@ -99,11 +108,12 @@ canvas{grid-area:1/1;align-self:center;display:block;width:100%;height:auto;touc
 
 /* a line of text that drifts across the field now and then */
 .murmur{
-  position:absolute;left:0;right:0;top:38%;text-align:center;pointer-events:none;
-  font-family:var(--type);font-size:clamp(15px,3.4vw,20px);color:var(--dream);
+  position:absolute;left:0;right:0;top:30%;text-align:center;pointer-events:none;
+  font-family:var(--type);font-size:clamp(15px,3.4vw,20px);color:var(--lunar);
+  text-shadow:0 2px 14px rgba(0,0,0,.9),0 0 30px rgba(0,0,0,.8);
   opacity:0;transition:opacity 1.4s ease;padding:0 24px;text-wrap:balance;
 }
-.murmur.on{opacity:.72}
+.murmur.on{opacity:.9}
 
 /* the panel that covers the field before and after a round */
 .veil{
@@ -112,6 +122,10 @@ canvas{grid-area:1/1;align-self:center;display:block;width:100%;height:auto;touc
   background:rgba(0,0,0,.82);backdrop-filter:blur(3px);
 }
 .veil[hidden]{display:none}
+/* The game's own painted sign, cut out of the sprite sheet at load. It is
+   decoration on top of the heading, never a replacement for it — the words
+   have to exist as text for anyone who cannot see the picture. */
+.sign{width:min(230px,54%);height:auto;display:block;image-rendering:auto}
 .veil h1{font-family:var(--type);font-size:clamp(23px,5.4vw,36px);font-weight:400;color:var(--lunar);line-height:1.2;text-wrap:balance}
 .veil p{font-size:14.5px;line-height:1.7;color:var(--dream);max-width:44ch}
 .veil .small{font-size:12.5px;color:var(--glow);line-height:1.7;max-width:46ch}
@@ -119,15 +133,17 @@ canvas{grid-area:1/1;align-self:center;display:block;width:100%;height:auto;touc
   font-family:var(--sans);font-size:11px;font-weight:600;letter-spacing:.2em;
   text-transform:uppercase;background:var(--dream);color:var(--night);
   border:none;border-radius:2px;padding:15px 30px;cursor:pointer;
-  transition:background .25s;
+  transition:background .25s,opacity .25s;
 }
 .btn:hover{background:var(--pulse)}
 .btn:focus-visible{outline:1px solid var(--pulse);outline-offset:3px}
+.btn[disabled]{opacity:.45;cursor:default;background:var(--dream)}
 
-/* how to play */
+/* how to play — now the real sprites, cut from the same sheet the game uses,
+   so what the legend shows and what walks across the field cannot drift apart */
 .rules{display:flex;gap:26px;flex-wrap:wrap;justify-content:center;padding-top:2px}
 .rule{display:flex;align-items:center;gap:10px;font-size:12.5px;color:var(--glow);line-height:1.5}
-.ico{width:38px;height:25px;flex:none}
+.ico{width:58px;height:58px;flex:none;object-fit:contain}
 
 /* the two numbers on the veil: yours, and the best anyone has managed */
 .bests{display:flex;gap:34px;justify-content:center;flex-wrap:wrap}
@@ -188,22 +204,23 @@ canvas{grid-area:1/1;align-self:center;display:block;width:100%;height:auto;touc
   </div>
 
   <div class="field">
-    <canvas id="cv" width="1480" height="620" aria-label="A field at night. Sheep walk from right to left and jump the fence."></canvas>
+    <canvas id="cv" width="1480" height="620" aria-label="A moonlit farm. Sheep run from right to left and jump the fence."></canvas>
     <div class="murmur" id="murmur"></div>
 
     <div class="veil" id="veil">
+      <img class="sign" id="sign" alt="" hidden>
       <h1 id="vh">Count them as they jump.</h1>
-      <p id="vp">They only count while they are in the air. Tap each sheep as it clears the fence. Some of them are wolves wearing fleece — look at the ears, and the eye. Count a wolf, or let a sheep past, and you lose a little of your attention.</p>
+      <p id="vp">They only count while they are in the air. Tap each sheep as it clears the fence — white or black, both count. Some of them are wolves wearing fleece: grey muzzle, yellow eyes, teeth. Count a wolf, or let a sheep past, and you lose a little of your attention.</p>
       <div class="rules" id="vrules">
-        <span class="rule"><svg class="ico" viewBox="-7 -4 45 30" aria-hidden="true"><circle cx="12" cy="14" r="7" fill="#e8e4f0"/><circle cx="20" cy="11" r="8" fill="#e8e4f0"/><circle cx="27" cy="14" r="7" fill="#e8e4f0"/><ellipse cx="7" cy="12" rx="5" ry="4" fill="#b9b1d2"/><ellipse cx="9" cy="7" rx="2.4" ry="1.5" fill="#b9b1d2"/><circle cx="4.5" cy="11.5" r="1" fill="#2a2540"/></svg> count these</span>
-        <span class="rule"><svg class="ico" viewBox="-7 -4 45 30" aria-hidden="true"><circle cx="12" cy="14" r="7" fill="#e8e4f0"/><circle cx="20" cy="11" r="8" fill="#e8e4f0"/><circle cx="27" cy="14" r="7" fill="#e8e4f0"/><path d="M9 6 L7.5 0.5 L13 4 Z" fill="#b9b1d2"/><path d="M13 4 L12 -0.5 L17 3 Z" fill="#b9b1d2"/><ellipse cx="7" cy="12" rx="7" ry="3.6" fill="#b9b1d2"/><path d="M0.5 10 L-4 12 L0.5 14 Z" fill="#b9b1d2"/><circle cx="6" cy="11" r="1.3" fill="#d4af6a"/></svg> never count a wolf</span>
+        <span class="rule"><img class="ico" id="icoSheep" alt="" src="data:image/gif;base64,R0lGODlhAQABAAAAACH5BAEKAAEALAAAAAABAAEAAAICTAEAOw=="> count these</span>
+        <span class="rule"><img class="ico" id="icoWolf" alt="" src="data:image/gif;base64,R0lGODlhAQABAAAAACH5BAEKAAEALAAAAAABAAEAAAICTAEAOw=="> never count a wolf</span>
       </div>
       <div class="bests" id="bests" hidden>
         <span class="best"><b id="myBest">0</b><span>your best</span></span>
         <span class="best quiet"><b id="topBest">—</b><span id="topWho">top score</span></span>
       </div>
       <div class="endrow">
-        <button class="btn" id="go">Begin</button>
+        <button class="btn" id="go" disabled>Loading…</button>
         <a class="give" id="give" href="https://lucidatnight.com/#support" hidden>Support Lucid</a>
       </div>
       <p class="small" id="vs">Three lapses and the night is over.</p>
@@ -233,6 +250,7 @@ canvas{grid-area:1/1;align-self:center;display:block;width:100%;height:auto;touc
   var livesEl = document.getElementById('lives');
   var murmurEl = document.getElementById('murmur');
   var veil = document.getElementById('veil');
+  var signEl = document.getElementById('sign');
   var vh = document.getElementById('vh');
   var vp = document.getElementById('vp');
   var vs = document.getElementById('vs');
@@ -444,6 +462,7 @@ canvas{grid-area:1/1;align-self:center;display:block;width:100%;height:auto;touc
   var FENCE_TOP = 64;             // how far the rails stand above the ground
   var SPAN = 190;                 // how far out the take-off and landing are
   var HEIGHT = 150;               // apex of the arc
+  var FOOT = GROUND + 34;         // the line their hooves stand on
 
   /* The arc is a function of WHERE the animal is, not how long it has been
      jumping. Tied to time, a fast sheep was already past the fence before it
@@ -455,14 +474,106 @@ canvas{grid-area:1/1;align-self:center;display:block;width:100%;height:auto;touc
     return Math.sin(((d + SPAN) / (SPAN * 2)) * Math.PI) * HEIGHT;
   }
 
+  /* ── the art ─────────────────────────────────────────────
+     One atlas and one backdrop, both real files next to this page rather than
+     base64 inside it. They are the two biggest things the game loads and they
+     never change between rounds, so letting the browser cache them separately
+     is worth two extra requests.
+
+     The frame table is the same for all three characters: four idle, four run,
+     then rise / airborne / land. That is how the sheet was drawn, and it is why
+     a sheep and a wolf can share one animation routine. */
+  var FRAMES = {"bi0":[143,361,69,87],"bi1":[0,361,68,89],"bi2":[696,265,72,90],"bi3":[68,361,75,88],"bj0":[357,361,66,84],"bj1":[901,161,75,96],"bj2":[768,265,81,90],"br0":[137,265,92,95],"br1":[816,161,85,96],"br2":[568,161,88,100],"br3":[771,361,75,80],"cloud0":[846,361,119,75],"cloud1":[0,450,201,75],"cloud2":[395,450,163,65],"cloud3":[558,450,136,58],"fence":[423,361,151,84],"fi0":[874,0,76,105],"fi1":[316,161,75,102],"fi2":[0,161,70,104],"fi3":[950,0,74,105],"fj0":[782,0,92,106],"fj1":[158,161,83,104],"fj2":[241,161,75,103],"fr0":[483,161,85,101],"fr1":[391,161,92,102],"fr2":[687,0,95,109],"fr3":[70,161,88,104],"isle0":[230,0,169,158],"isle1":[399,0,167,143],"isle2":[566,0,121,117],"prop0":[656,361,115,82],"prop1":[201,450,106,71],"prop2":[0,265,137,96],"prop3":[307,450,88,67],"prop4":[229,265,74,94],"prop5":[656,161,72,100],"sign":[0,0,230,161],"wi0":[303,265,74,92],"wi1":[849,265,73,89],"wi2":[922,265,74,89],"wi3":[453,265,81,91],"wj0":[212,361,65,86],"wj1":[377,265,76,92],"wj2":[574,361,82,82],"wr0":[534,265,85,91],"wr1":[619,265,77,91],"wr2":[728,161,88,98],"wr3":[277,361,80,85]};
+
+  var atlas = new Image();
+  var bg = new Image();
+  var ready = 0, broken = false;
+
+  function draw(key, cx, footY, scale, flip, tilt, alpha) {
+    var f = FRAMES[key];
+    if (!f) return;
+    var w = f[2] * scale, h = f[3] * scale;
+    ctx.save();
+    if (alpha !== undefined) ctx.globalAlpha = alpha;
+    ctx.translate(cx, footY - h / 2);
+    if (tilt) ctx.rotate(tilt);
+    if (flip) ctx.scale(-1, 1);
+    ctx.drawImage(atlas, f[0], f[1], f[2], f[3], -w / 2, -h / 2, w, h);
+    ctx.restore();
+  }
+
+  /* Cut one frame out of the atlas and hand it back as its own image. Used for
+     the title sign and the two legend icons, which have to be real <img>
+     elements so they lay out with the text and get read as pictures. Doing it
+     from the atlas means there is exactly one copy of the art on the wire. */
+  function cutOut(key, el, scale) {
+    var f = FRAMES[key];
+    var c = document.createElement('canvas');
+    c.width = f[2] * scale; c.height = f[3] * scale;
+    var g = c.getContext('2d');
+    g.imageSmoothingQuality = 'high';
+    g.drawImage(atlas, f[0], f[1], f[2], f[3], 0, 0, c.width, c.height);
+    try { el.src = c.toDataURL('image/png'); el.hidden = false; } catch (e) {}
+  }
+
+  function armed() {
+    ready++;
+    if (ready < 2) return;
+    cutOut('sign', signEl, 1);
+    cutOut('wi0', document.getElementById('icoSheep'), 1);
+    cutOut('fi2', document.getElementById('icoWolf'), 1);
+    goBtn.disabled = false;
+    goBtn.textContent = 'Begin';
+  }
+
+  function failed() {
+    if (broken) return;
+    broken = true;
+    goBtn.textContent = 'Reload';
+    goBtn.disabled = false;
+    vp.textContent = 'The pictures for this game did not load. Reloading usually fixes it.';
+  }
+
+  atlas.onload = armed;  atlas.onerror = failed;
+  bg.onload = function () { placeBg(); armed(); };
+  bg.onerror = failed;
+  atlas.src = 'img/sheep-atlas.png';
+  bg.src = 'img/sheep-bg.jpg';
+
+  /* The backdrop is a still painting, not a tiling strip, so it is placed once
+     and then left alone. Scaled to cover, and anchored so the near grass lands
+     just above the line the sheep walk on — if the horizon sits below their
+     hooves they look like they are floating over the field. */
+  var bgBox = null;
+  function placeBg() {
+    var s = Math.max(W / bg.width, H / bg.height);
+    if (W === NARROW) s *= 1.25;          // a phone gets less field, so zoom in
+    var dw = bg.width * s, dh = bg.height * s;
+    var dx = (W - dw) / 2;
+    var dy = GROUND * 0.86 - 0.72 * bg.height * s;
+    // Never leave a strip of empty canvas at the top or the bottom.
+    dy = Math.min(0, Math.max(H - dh, dy));
+    bgBox = [dx, dy, dw, dh];
+  }
+
   var state = 'idle';             // idle | playing | over
-  var sheep = [], marks = [], stars = [];
+  var sheep = [], marks = [];
   var counted = 0, lives = 3, spawnAt = 0, nextId = 1, last = 0;
 
-  for (var i = 0; i < 90; i++) {
-    stars.push({ x: Math.random() * W, y: Math.random() * GROUND * 0.92,
-                 r: Math.random() * 1.5 + 0.3, tw: Math.random() * Math.PI * 2 });
-  }
+  /* Scenery. Fixed once so the field is the same field every round — a farm
+     that rearranges itself between goes reads as a glitch, not as variety. */
+  var PROPS = [
+    ['prop2', 0.05, 1.00], ['prop0', 0.17, 0.92], ['prop5', 0.24, 1.05],
+    ['prop4', 0.66, 0.82], ['prop1', 0.80, 0.92], ['prop3', 0.93, 0.88]
+  ];
+  var ISLES = [
+    { k: 'isle0', x: 0.18, y: 0.16, s: 0.62, v: 0.0045, a: 0.5 },
+    { k: 'isle2', x: 0.70, y: 0.10, s: 0.52, v: 0.0030, a: 0.42 }
+  ];
+  var CLOUDS = [
+    { k: 'cloud1', x: 0.30, y: 0.30, s: 0.9, v: 0.011, a: 0.3 },
+    { k: 'cloud3', x: 0.86, y: 0.24, s: 0.8, v: 0.008, a: 0.26 }
+  ];
 
   /* Quiet lines that drift across the field as the count climbs. They are the
      only place the game speaks, and they get sleepier, because that is the
@@ -503,6 +614,10 @@ canvas{grid-area:1/1;align-self:center;display:block;width:100%;height:auto;touc
       y: GROUND,
       lift: 0,
       wolf: wolf,
+      // A black sheep is a sheep. It is here so that colour alone is never the
+      // answer — what marks a wolf is its face, and one flock of identical
+      // white bodies lets you win without ever looking at one.
+      kind: wolf ? 'f' : (Math.random() < 0.22 ? 'b' : 'w'),
       counted: false,
       wobble: Math.random() * Math.PI * 2,
       v: speed() * (0.92 + Math.random() * 0.2)
@@ -533,6 +648,7 @@ canvas{grid-area:1/1;align-self:center;display:block;width:100%;height:auto;touc
     // Asked before the score is filed, or every round beats itself.
     var beat = counted > 0 && counted > myBestNumber();
 
+    signEl.hidden = true;
     vh.textContent = counted === 0
       ? 'You did not count a single one.'
       : 'You counted ' + counted + '.';
@@ -555,6 +671,7 @@ canvas{grid-area:1/1;align-self:center;display:block;width:100%;height:auto;touc
   }
 
   function start() {
+    if (broken) { location.reload(); return; }
     reset();
     vrules.hidden = false;
     giveEl.hidden = true;
@@ -567,89 +684,46 @@ canvas{grid-area:1/1;align-self:center;display:block;width:100%;height:auto;touc
 
   /* ── drawing ─────────────────────────────────────────── */
 
-  /* A wolf wears the same fleece as everyone else — that is the whole idea of
-     the phrase. Nothing about it is a different colour from a sheep except its
-     eye. What gives it away is the shape: pointed ears instead of a folded one,
-     a longer muzzle, and a tail that stands up rather than hanging. */
+  /* Which frame an animal is on is read off the arc, not off a timer. On the
+     ground it is the run cycle, stepped by distance travelled so the legs keep
+     up with however fast it is going. In the air it is rise, then airborne,
+     then land, chosen by where it is relative to the fence — so the apex frame
+     is always the one over the rails. */
+  function frameFor(s) {
+    var d = FENCE_X - s.x;
+    // Standing still, the idle frames are the right ones — a run cycle on a
+    // stationary sheep looks like it is treading water.
+    if (s.v === 0 && s.lift < 4) return s.kind + 'i' + (Math.floor(s.wobble) % 4);
+    if (s.lift < 4) return s.kind + 'r' + (Math.floor(s.wobble) % 4);
+    if (d < -SPAN * 0.42) return s.kind + 'j0';
+    if (d < SPAN * 0.42)  return s.kind + 'j1';
+    return s.kind + 'j2';
+  }
+
+  /* The field is 1480 wide and arrives on a laptop about 760 CSS pixels across,
+     so everything in it is shown at roughly half size. A sheep drawn at its
+     native 90px would land at 45 on screen, which is too small to read a face
+     on — and reading the face is the entire game. */
+  var SCALE = 1.4;
+
   function drawSheep(s) {
-    var y = s.y - s.lift;
-    var wool = '#e8e4f0';
-    var face = '#b9b1d2';
+    var d = FENCE_X - s.x;
+    // Nose up on the way over, nose down on the way down. Small — the art is
+    // already drawn mid-leap and a big rotation makes it spin.
+    var tilt = s.lift > 4 ? Math.max(-1, Math.min(1, d / SPAN)) * 0.18 : 0;
 
+    // A shadow on the grass. Without one a jumping sheep has no height — it
+    // just gets higher up the picture, which reads as further away.
+    var fade = 1 - s.lift / HEIGHT;
     ctx.save();
-    ctx.translate(s.x, y);
-
-    // legs
-    ctx.strokeStyle = face;
-    ctx.lineWidth = 4;
-    ctx.lineCap = 'round';
-    var swing = Math.sin(s.wobble) * 6;
-    [[-14, swing], [10, -swing]].forEach(function (p) {
-      ctx.beginPath();
-      ctx.moveTo(p[0], 16);
-      ctx.lineTo(p[0] + p[1] * 0.4, 34);
-      ctx.stroke();
-    });
-
-    // tail — a sheep's hangs, a wolf's is up and out
-    ctx.strokeStyle = face;
-    ctx.lineWidth = s.wolf ? 6 : 5;
+    ctx.globalAlpha = 0.28 * fade + 0.06;
+    ctx.fillStyle = '#000';
     ctx.beginPath();
-    ctx.moveTo(24, 4);
-    if (s.wolf) ctx.quadraticCurveTo(40, -6, 46, -20);
-    else        ctx.quadraticCurveTo(31, 12, 30, 22);
-    ctx.stroke();
-
-    // fleece — identical on both
-    ctx.fillStyle = wool;
-    [[-16, 2, 17], [0, -6, 20], [16, 2, 17], [2, 10, 16]].forEach(function (c) {
-      ctx.beginPath();
-      ctx.arc(c[0], c[1], c[2], 0, Math.PI * 2);
-      ctx.fill();
-    });
-
-    ctx.fillStyle = face;
-    if (s.wolf) {
-      // pointed ears
-      [[-24, -13], [-33, -9]].forEach(function (e) {
-        ctx.beginPath();
-        ctx.moveTo(e[0], e[1]);
-        ctx.lineTo(e[0] - 3, e[1] - 15);
-        ctx.lineTo(e[0] + 8, e[1] - 5);
-        ctx.closePath();
-        ctx.fill();
-      });
-      // long muzzle
-      ctx.beginPath();
-      ctx.ellipse(-31, -1, 15, 8, -0.16, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.beginPath();
-      ctx.moveTo(-42, -3); ctx.lineTo(-52, 1); ctx.lineTo(-42, 5);
-      ctx.closePath();
-      ctx.fill();
-      // the eye. The only colour either animal has, and it is not on the sheep.
-      ctx.fillStyle = '#d4af6a';
-      ctx.shadowColor = 'rgba(212,175,106,.9)';
-      ctx.shadowBlur = 10;
-      ctx.beginPath();
-      ctx.arc(-30, -4, 2.6, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.shadowBlur = 0;
-    } else {
-      // head, one folded ear, dark eye
-      ctx.beginPath();
-      ctx.ellipse(-30, -2, 11, 9, -0.25, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.beginPath();
-      ctx.ellipse(-25, -11, 5, 3, -0.7, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.fillStyle = '#2a2540';
-      ctx.beginPath();
-      ctx.arc(-35, -3, 2.1, 0, Math.PI * 2);
-      ctx.fill();
-    }
-
+    ctx.ellipse(s.x, FOOT - 2, 30 * (0.55 + fade * 0.45), 8 * (0.5 + fade * 0.5), 0, 0, Math.PI * 2);
+    ctx.fill();
     ctx.restore();
+
+    draw(frameFor(s), s.x, FOOT - s.lift, SCALE, true, tilt);
   }
 
   function frame(now) {
@@ -658,59 +732,50 @@ canvas{grid-area:1/1;align-self:center;display:block;width:100%;height:auto;touc
 
     ctx.clearRect(0, 0, W, H);
 
-    // sky
-    var sky = ctx.createLinearGradient(0, 0, 0, GROUND + 40);
-    sky.addColorStop(0, '#05050a');
-    sky.addColorStop(1, '#0e0e18');
-    ctx.fillStyle = sky;
-    ctx.fillRect(0, 0, W, GROUND + 40);
+    if (bgBox) {
+      ctx.drawImage(bg, bgBox[0], bgBox[1], bgBox[2], bgBox[3]);
+    } else {
+      ctx.fillStyle = '#0b1430';
+      ctx.fillRect(0, 0, W, H);
+    }
 
-    // stars
-    stars.forEach(function (st) {
-      if (!calm) st.tw += 0.012;
-      var a = 0.25 + Math.abs(Math.sin(st.tw)) * 0.5;
-      ctx.fillStyle = 'rgba(200,190,230,' + a.toFixed(3) + ')';
-      ctx.beginPath();
-      ctx.arc(st.x, st.y, st.r, 0, Math.PI * 2);
-      ctx.fill();
+    /* The painting is a bright summer night and the site around it is black.
+       Pulling it down toward Lucid's own dark keeps the game inside the site
+       rather than beside it, and gives the gold numbers something to sit on. */
+    var wash = ctx.createLinearGradient(0, 0, 0, H);
+    wash.addColorStop(0, 'rgba(6,6,16,.62)');
+    wash.addColorStop(0.55, 'rgba(8,8,20,.40)');
+    wash.addColorStop(1, 'rgba(4,4,12,.58)');
+    ctx.fillStyle = wash;
+    ctx.fillRect(0, 0, W, H);
+
+    var drift = calm ? 0 : now;
+
+    // Islands and clouds move against the still painting, which is the only
+    // thing telling you this is a dream and not a photograph of a farm.
+    ISLES.forEach(function (o) {
+      var x = ((o.x * W - drift * o.v) % (W + 400) + W + 400) % (W + 400) - 200;
+      draw(o.k, x, o.y * H + FRAMES[o.k][3] * o.s / 2, o.s, false, 0, o.a);
+    });
+    CLOUDS.forEach(function (o) {
+      var x = ((o.x * W - drift * o.v) % (W + 500) + W + 500) % (W + 500) - 250;
+      draw(o.k, x, o.y * H + FRAMES[o.k][3] * o.s / 2, o.s, false, 0, o.a);
     });
 
-    // moon
-    ctx.fillStyle = 'rgba(232,228,240,.13)';
-    ctx.beginPath();
-    ctx.arc(W * 0.82, H * 0.17, 46, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.fillStyle = '#05050a';
-    ctx.beginPath();
-    ctx.arc(W * 0.80, H * 0.145, 44, 0, Math.PI * 2);
-    ctx.fill();
-
-    // ground
-    ctx.fillStyle = '#070709';
-    ctx.fillRect(0, GROUND + 34, W, H - GROUND - 34);
-    ctx.strokeStyle = 'rgba(168,155,200,.22)';
-    ctx.lineWidth = 1.4;
-    ctx.beginPath();
-    ctx.moveTo(0, GROUND + 34);
-    ctx.lineTo(W, GROUND + 34);
-    ctx.stroke();
-
-    // fence
-    ctx.strokeStyle = 'rgba(212,175,106,.62)';
-    ctx.lineWidth = 5;
-    ctx.lineCap = 'round';
-    [-26, 26].forEach(function (o) {
-      ctx.beginPath();
-      ctx.moveTo(FENCE_X + o, GROUND + 34);
-      ctx.lineTo(FENCE_X + o, GROUND - FENCE_TOP);
-      ctx.stroke();
+    // Scenery sits on the same line the sheep do, behind them.
+    PROPS.forEach(function (p) {
+      draw(p[0], p[1] * W, FOOT + 4, p[2] * 0.9, false, 0, 0.92);
     });
-    [-22, 6].forEach(function (o) {
-      ctx.beginPath();
-      ctx.moveTo(FENCE_X - 34, GROUND - FENCE_TOP + 34 + o);
-      ctx.lineTo(FENCE_X + 34, GROUND - FENCE_TOP + 34 + o);
-      ctx.stroke();
-    });
+
+    // The fence they jump. Drawn to the height the arc already assumed, so the
+    // apex clears the rails by the same margin it always did.
+    // Tall enough to be a fence a sheep has to clear, short enough that the
+    // ends of the arc still pass over the rails rather than through them: at
+    // the edge of the jump window the arc is only about 97 above the ground,
+    // and half the fence's own width out from its middle.
+    var fh = (FENCE_TOP + 54);
+    var fs = fh / FRAMES.fence[3];
+    draw('fence', FENCE_X, FOOT + 6, fs, false, 0, 1);
 
     if (state === 'playing') {
       if (now > spawnAt) { spawn(); spawnAt = now + gap(); }
@@ -718,7 +783,8 @@ canvas{grid-area:1/1;align-self:center;display:block;width:100%;height:auto;touc
       for (var i = sheep.length - 1; i >= 0; i--) {
         var s = sheep[i];
         s.x -= s.v * (dt / 16.7);
-        s.wobble += 0.16;
+        // Stepped by distance, so the legs match the speed at every size.
+        s.wobble += (s.v * (dt / 16.7)) * 0.055;
         s.lift = liftAt(s.x);
 
         if (s.x < -110) {
@@ -743,9 +809,14 @@ canvas{grid-area:1/1;align-self:center;display:block;width:100%;height:auto;touc
       if (mk.life <= 0) { marks.splice(k, 1); continue; }
       mk.y -= dt * 0.05;
       ctx.globalAlpha = Math.max(0, Math.min(1, mk.life * 1.6));
-      ctx.fillStyle = mk.bad ? '#e07070' : '#d4af6a';
       ctx.font = '600 40px "Secret Typewriter", "Courier New", monospace';
       ctx.textAlign = 'center';
+      // The count now lands on a lit field instead of a black one, so it gets
+      // its own dark edge rather than relying on the background to be dark.
+      ctx.lineWidth = 6;
+      ctx.strokeStyle = 'rgba(0,0,0,.72)';
+      ctx.strokeText(mk.text, mk.x, mk.y);
+      ctx.fillStyle = mk.bad ? '#e07070' : '#f0cd86';
       ctx.fillText(mk.text, mk.x, mk.y);
       ctx.globalAlpha = 1;
     }
@@ -763,14 +834,18 @@ canvas{grid-area:1/1;align-self:center;display:block;width:100%;height:auto;touc
     var best = null, bestD = 999;
     sheep.forEach(function (s) {
       if (s.lift < 30) return;
-      var dx = s.x - px, dy = (s.y - s.lift) - py;
+      var f = FRAMES[frameFor(s)];
+      var cy = FOOT - s.lift - f[3] * SCALE / 2;
+      var dx = s.x - px, dy = cy - py;
       var d = Math.sqrt(dx * dx + dy * dy);
       if (d < 66 && d < bestD) { best = s; bestD = d; }
     });
     if (!best) return;
 
+    var fy = FOOT - best.lift - FRAMES[frameFor(best)][3] * SCALE;
+
     if (best.wolf) {
-      marks.push({ x: best.x, y: best.y - best.lift - 40, text: '✕', life: 0.9, bad: true });
+      marks.push({ x: best.x, y: fy - 8, text: '✕', life: 0.9, bad: true });
       best.counted = true;                       // so it cannot cost twice
       lapse('that one was a wolf');
       return;
@@ -780,8 +855,8 @@ canvas{grid-area:1/1;align-self:center;display:block;width:100%;height:auto;touc
     best.counted = true;
     counted++;
     countEl.textContent = counted;
-    capEl.textContent = counted === 1 ? 'sheep counted' : 'sheep counted';
-    marks.push({ x: best.x, y: best.y - best.lift - 40, text: String(counted), life: 0.9, bad: false });
+    capEl.textContent = 'sheep counted';
+    marks.push({ x: best.x, y: fy - 8, text: String(counted), life: 0.9, bad: false });
     bump();
   }
 
@@ -799,10 +874,12 @@ canvas{grid-area:1/1;align-self:center;display:block;width:100%;height:auto;touc
 
   goBtn.addEventListener('click', start);
 
-  // A few sheep standing about before you begin, so the field is not empty.
-  sheep.push({ id: 0, x: W * 0.70, y: GROUND, lift: 0, wolf: false, counted: true, wobble: 0.4, v: 0 });
-  sheep.push({ id: 0, x: W * 0.86, y: GROUND, lift: 0, wolf: false, counted: true, wobble: 2.1, v: 0 });
-  sheep.push({ id: 0, x: W * 0.20, y: GROUND, lift: 0, wolf: true, counted: true, wobble: 3.4, v: 0 });
+  // A few animals standing about before you begin, so the field is not empty
+  // and the difference between a sheep's face and a wolf's is on screen before
+  // it costs anybody anything.
+  sheep.push({ id: 0, x: W * 0.72, y: GROUND, lift: 0, wolf: false, kind: 'w', counted: true, wobble: 0.4, v: 0 });
+  sheep.push({ id: 0, x: W * 0.86, y: GROUND, lift: 0, wolf: false, kind: 'b', counted: true, wobble: 2.1, v: 0 });
+  sheep.push({ id: 0, x: W * 0.22, y: GROUND, lift: 0, wolf: true,  kind: 'f', counted: true, wobble: 3.4, v: 0 });
 
   paintLives();
   paintBests();
