@@ -1760,22 +1760,23 @@ function gamesView(){
     +   '</span>'
     + '</a>'
 
-    /* Wake Up! — built, not shipped. A div, not a link: there is nowhere for it
-       to go yet, and a card that looks clickable and isn't is worse than one
-       that plainly says it is not ready. */
-    + '<div class="gcard wide soon">'
+    /* Wake Up! — live now, so it is a link with a Play on it like the other
+       one. It was a plain div while there was nowhere for it to go: a card
+       that looks clickable and isn't is worse than one that says it is not
+       ready. */
+    + '<a class="gcard wide" href="wake.html">'
     +   '<img class="gsoon-art" src="img/wakeup.jpg" alt="A boy in pyjamas swings a baseball '
     +     'bat at his alarm clock, launching it out over a sky full of floating islands.">'
-    +   '<div class="gsoon-body">'
+    +   '<span class="gsoon-body">'
     +     '<span class="gtext">'
     +       '<span class="gname">Wake Up!</span>'
     +       '<span class="gdesc">Tap as fast as you can for three seconds. Your alarm clock '
-    +         'gets hit with a baseball bat and flies out of the bedroom, through the sky, '
-    +         'past the floating islands and into the dark. Go further than last time.</span>'
+    +         'gets hit with a baseball bat and flies out of the bedroom, and every cloud it '
+    +         'clips throws it further. Go further than last time.</span>'
     +     '</span>'
-    +     '<span class="gsoon-tag">Coming soon</span>'
-    +   '</div>'
-    + '</div>'
+    +     '<span class="gplay">Play</span>'
+    +   '</span>'
+    + '</a>'
 
     + '<p class="gnote">More to come. If you have an idea for one, put it on the feed.</p>';
 }
