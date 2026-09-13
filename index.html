@@ -366,6 +366,21 @@ label.ghost{display:inline-block}
 }
 .gcard:hover .gplay{background:var(--pulse)}
 .gnote{font-size:13px;color:var(--glow);line-height:1.7;margin-top:26px}
+/* A game that isn't playable yet. Same card, but a <div> rather than an <a> —
+   nothing here is clickable, so it must not look or behave like a link: no
+   hover lift, no focus ring, no pointer. The banner sits on top instead of a
+   small icon beside the text, because for a coming-soon card the picture is
+   the entire pitch. */
+.gcard.soon{display:block;padding:0;overflow:hidden;cursor:default}
+.gcard.soon:hover{border-color:var(--edge);background:var(--deep)}
+.gsoon-art{display:block;width:100%;aspect-ratio:1672/941;object-fit:cover;
+  border-bottom:1px solid var(--edge)}
+.gsoon-body{display:flex;align-items:center;gap:22px;padding:22px 26px;flex-wrap:wrap}
+.gsoon-tag{
+  flex:none;font-size:11px;font-weight:600;letter-spacing:.2em;text-transform:uppercase;
+  color:var(--gold);border:1px solid rgba(212,175,106,.45);border-radius:2px;padding:12px 20px;
+}
+@media (max-width:620px){ .gsoon-tag{width:100%;text-align:center} }
 
 /* ── common dreams ───────────────────────────────────────
    The closed card carries a picture and a name and nothing else. Anything
@@ -1742,6 +1757,23 @@ function gamesView(){
     +   '</span>'
     +   '<span class="gplay">Play</span>'
     + '</a>'
+
+    /* Wake Up! — built, not shipped. A div, not a link: there is nowhere for it
+       to go yet, and a card that looks clickable and isn't is worse than one
+       that plainly says it is not ready. */
+    + '<div class="gcard soon">'
+    +   '<img class="gsoon-art" src="img/wakeup.jpg" alt="A boy in pyjamas swings a baseball '
+    +     'bat at his alarm clock, launching it out over a sky full of floating islands.">'
+    +   '<div class="gsoon-body">'
+    +     '<span class="gtext">'
+    +       '<span class="gname">Wake Up!</span>'
+    +       '<span class="gdesc">Tap as fast as you can for three seconds. Your alarm clock '
+    +         'gets hit with a baseball bat and flies out of the bedroom, through the sky, '
+    +         'past the floating islands and into the dark. Go further than last time.</span>'
+    +     '</span>'
+    +     '<span class="gsoon-tag">Coming soon</span>'
+    +   '</div>'
+    + '</div>'
 
     + '<p class="gnote">More to come. If you have an idea for one, put it on the feed.</p>';
 }
