@@ -64,6 +64,22 @@ body{
 .name:hover{color:var(--pulse)}
 .name:focus-visible{outline:1px solid var(--pulse);outline-offset:4px}
 .name .arrow{letter-spacing:0;font-size:14px}
+.tools{display:flex;align-items:center;gap:18px}
+/* Sound is off until it is asked for, so this button's job is to be findable
+   without being a suggestion. It reads as part of the furniture until you
+   want it, which is the right weight for a control on a game about sleeping. */
+.snd{
+  background:none;border:none;padding:4px;cursor:pointer;color:var(--glow);
+  display:inline-flex;line-height:0;transition:color .25s;
+}
+.snd:hover{color:var(--pulse)}
+.snd:focus-visible{outline:1px solid var(--pulse);outline-offset:3px;border-radius:2px}
+.snd[aria-pressed="true"]{color:var(--pulse)}
+.snd svg{width:17px;height:17px;display:block}
+.snd .wave{opacity:0;transition:opacity .25s}
+.snd[aria-pressed="true"] .wave{opacity:1}
+.snd .slash{opacity:1;transition:opacity .25s}
+.snd[aria-pressed="true"] .slash{opacity:0}
 .lives{display:flex;gap:9px;align-items:center}
 .moon{width:11px;height:11px;border-radius:50%;background:var(--pulse);box-shadow:0 0 10px rgba(196,181,232,.5);transition:background .4s,box-shadow .4s,transform .4s}
 .moon.gone{background:var(--mist);box-shadow:none;transform:scale(.7)}
@@ -193,8 +209,18 @@ canvas{grid-area:1/1;align-self:center;display:block;width:100%;height:auto;touc
 <div class="frame">
   <div class="top">
     <a class="name" href="https://lucidatnight.com/"><span class="arrow" aria-hidden="true">&larr;</span> Lucid</a>
-    <div class="lives" id="lives" aria-label="Attention remaining">
-      <span class="moon"></span><span class="moon"></span><span class="moon"></span>
+    <div class="tools">
+      <button class="snd" id="snd" type="button" aria-pressed="false" aria-label="Turn sound on">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"
+             stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M4 9v6h4l5 4V5L8 9H4z" fill="currentColor" stroke="none"/>
+          <g class="wave"><path d="M16.5 8.8a4.5 4.5 0 0 1 0 6.4"/><path d="M19.2 6.2a8 8 0 0 1 0 11.6"/></g>
+          <path class="slash" d="M17 9.5l5 5m0-5l-5 5"/>
+        </svg>
+      </button>
+      <div class="lives" id="lives" aria-label="Attention remaining">
+        <span class="moon"></span><span class="moon"></span><span class="moon"></span>
+      </div>
     </div>
   </div>
 
@@ -556,9 +582,140 @@ canvas{grid-area:1/1;align-self:center;display:block;width:100%;height:auto;touc
     bgBox = [dx, dy, dw, dh];
   }
 
+  /* ── sound ───────────────────────────────────────────────
+     Off by default, and the files are not fetched until somebody asks for it.
+     A game about falling asleep that makes a noise at somebody wearing
+     headphones at 2am has done the opposite of its job, and a page that
+     downloads half a megabyte of audio nobody will hear is just rude.
+
+     Two files. The effects are one WAV holding all seven blips end to end:
+     WAV has no encoder padding, so an offset into the decoded buffer is
+     sample-exact, and a sound that answers a tap cannot afford to be 20ms
+     late. The ambience is an mp3, where that padding is harmless because it
+     lands inside the fade the loop crosses over. */
+  var SOUND_KEY = 'lucid_sheep_sound';
+  var SFX = {"jump":[0,0.36],"count":[0.38,0.24],"wolf":[0.64,0.5],"miss":[1.16,0.250023],"streak":[1.430023,0.38],"milestone":[1.830023,0.52],"step":[2.370023,0.189977]};
+  var AMB_OVERLAP = 1.5;          // must match the fade baked into the file
+
+  var sndBtn = document.getElementById('snd');
+  var au = { on: false, ctx: null, bus: null, ambBus: null, sfx: null, amb: null,
+             loading: false, next: 0, live: [], last: {} };
+
+  function soundWanted() { try { return localStorage.getItem(SOUND_KEY) === '1'; } catch (e) { return false; } }
+  function rememberSound(v) { try { localStorage.setItem(SOUND_KEY, v ? '1' : '0'); } catch (e) {} }
+
+  function grab(url) { return fetch(url).then(function (r) { return r.arrayBuffer(); }); }
+
+  function boot() {
+    // Must be called from inside a real gesture or the context starts
+    // suspended and nothing is ever heard.
+    if (!au.ctx) {
+      var AC = window.AudioContext || window.webkitAudioContext;
+      if (!AC) return;
+      au.ctx = new AC();
+      au.bus = au.ctx.createGain();    au.bus.gain.value = 0.9;
+      au.ambBus = au.ctx.createGain(); au.ambBus.gain.value = 0.0;
+      au.bus.connect(au.ctx.destination);
+      au.ambBus.connect(au.ctx.destination);
+    }
+    if (au.ctx.state === 'suspended') au.ctx.resume();
+    if (au.sfx || au.loading) { ambience(); return; }
+    au.loading = true;
+    Promise.all([grab('img/sheep-sfx.wav'), grab('img/sheep-night.mp3')])
+      .then(function (b) {
+        return Promise.all([
+          au.ctx.decodeAudioData(b[0]),
+          au.ctx.decodeAudioData(b[1])
+        ]);
+      })
+      .then(function (d) { au.sfx = d[0]; au.amb = d[1]; ambience(); })
+      .catch(function () { au.loading = false; });     // silence is a fine failure
+  }
+
+  /* One throttle table for everything. Several sheep can jump within a few
+     frames of each other and the same blip fired four times in 80ms is a
+     rattle, not four sheep. */
+  function play(name, gain, minGap) {
+    if (!au.on || !au.sfx) return;
+    var now = au.ctx.currentTime;
+    if (minGap && au.last[name] && now - au.last[name] < minGap) return;
+    au.last[name] = now;
+    var at = SFX[name];
+    var s = au.ctx.createBufferSource();
+    var g = au.ctx.createGain();
+    g.gain.value = gain === undefined ? 1 : gain;
+    s.buffer = au.sfx;
+    s.connect(g); g.connect(au.bus);
+    s.start(now, at[0], at[1]);
+  }
+
+  /* The loop is two overlapping copies rather than a looping buffer. The file
+     already fades in and out over 1.5s with an equal-power curve, so starting
+     the next copy 1.5s before this one ends IS the crossfade — no seam, and
+     no dependence on where the decoder decided the audio begins. */
+  function ambience() {
+    if (!au.on || !au.amb) return;
+    au.ambBus.gain.setTargetAtTime(0.55, au.ctx.currentTime, 1.2);
+    pump();
+  }
+
+  function pump() {
+    if (!au.on || !au.amb) return;
+    var t = au.ctx.currentTime;
+    var step = au.amb.duration - AMB_OVERLAP;
+    if (au.next < t + 0.15) au.next = t + 0.15;
+    while (au.next < t + 12) {
+      var s = au.ctx.createBufferSource();
+      s.buffer = au.amb;
+      s.connect(au.ambBus);
+      s.start(au.next);
+      au.live.push(s);
+      au.next += step;
+    }
+    au.live = au.live.filter(function (s) { return s.buffer; });
+  }
+
+  function hush() {
+    if (!au.ctx) return;
+    au.ambBus.gain.setTargetAtTime(0, au.ctx.currentTime, 0.4);
+    var dead = au.live;
+    au.live = []; au.next = 0;
+    setTimeout(function () {
+      dead.forEach(function (s) { try { s.stop(); } catch (e) {} });
+    }, 1400);
+  }
+
+  function setSound(on) {
+    au.on = on;
+    sndBtn.setAttribute('aria-pressed', on ? 'true' : 'false');
+    sndBtn.setAttribute('aria-label', on ? 'Turn sound off' : 'Turn sound on');
+    rememberSound(on);
+    if (on) boot(); else hush();
+  }
+
+  sndBtn.addEventListener('click', function () { setSound(!au.on); });
+
+  // Somebody who turned sound on last visit gets the button lit, but no
+  // browser will start audio without a gesture — so the first touch anywhere
+  // on the page is what actually opens the context.
+  if (soundWanted()) {
+    au.on = true;
+    sndBtn.setAttribute('aria-pressed', 'true');
+    sndBtn.setAttribute('aria-label', 'Turn sound off');
+    var wake = function () {
+      document.removeEventListener('pointerdown', wake, true);
+      document.removeEventListener('keydown', wake, true);
+      if (au.on) boot();
+    };
+    document.addEventListener('pointerdown', wake, true);
+    document.addEventListener('keydown', wake, true);
+  }
+
+  var ambCheck = 0;               // last time the ambience queue was topped up
+
   var state = 'idle';             // idle | playing | over
   var sheep = [], marks = [];
-  var counted = 0, lives = 3, spawnAt = 0, nextId = 1, last = 0;
+  var counted = 0, lives = 3, spawnAt = 0, nextId = 1, last = 0, streak = 0;
 
   /* Scenery. Fixed once so the field is the same field every round — a farm
      that rearranges itself between goes reads as a glitch, not as variety. */
@@ -594,7 +751,7 @@ canvas{grid-area:1/1;align-self:center;display:block;width:100%;height:auto;touc
 
   function reset() {
     sheep = []; marks = [];
-    counted = 0; lives = 3; spawnAt = 0; saidUpTo = -1;
+    counted = 0; lives = 3; spawnAt = 0; saidUpTo = -1; streak = 0;
     countEl.textContent = '0';
     capEl.textContent = 'sheep counted';
     murmurEl.className = 'murmur';
@@ -619,6 +776,8 @@ canvas{grid-area:1/1;align-self:center;display:block;width:100%;height:auto;touc
       // white bodies lets you win without ever looking at one.
       kind: wolf ? 'f' : (Math.random() < 0.22 ? 'b' : 'w'),
       counted: false,
+      leapt: false,                  // so the jump sound fires once, not per frame
+      step: 0,                       // which half of the run cycle the hooves are on
       wobble: Math.random() * Math.PI * 2,
       v: speed() * (0.92 + Math.random() * 0.2)
     });
@@ -631,6 +790,7 @@ canvas{grid-area:1/1;align-self:center;display:block;width:100%;height:auto;touc
 
   function lapse(why) {
     lives--;
+    streak = 0;                      // a lapse is what a streak is a streak of not doing
     paintLives();
     capEl.textContent = why;
     if (lives <= 0) end();
@@ -749,6 +909,11 @@ canvas{grid-area:1/1;align-self:center;display:block;width:100%;height:auto;touc
     ctx.fillStyle = wash;
     ctx.fillRect(0, 0, W, H);
 
+    // The ambience is scheduled a copy at a time, so something has to keep
+    // asking for the next one. Without this the field goes silent 43 seconds
+    // in and never comes back.
+    if (au.on && au.amb && now - ambCheck > 4000) { ambCheck = now; pump(); }
+
     var drift = calm ? 0 : now;
 
     // Islands and clouds move against the still painting, which is the only
@@ -782,10 +947,24 @@ canvas{grid-area:1/1;align-self:center;display:block;width:100%;height:auto;touc
 
       for (var i = sheep.length - 1; i >= 0; i--) {
         var s = sheep[i];
-        s.x -= s.v * (dt / 16.7);
+        var moved = s.v * (dt / 16.7);
+        s.x -= moved;
         // Stepped by distance, so the legs match the speed at every size.
-        s.wobble += (s.v * (dt / 16.7)) * 0.055;
+        s.wobble += moved * 0.055;
         s.lift = liftAt(s.x);
+
+        if (!s.leapt && s.lift > 6) { s.leapt = true; play('jump', 0.55, 0.10); }
+
+        // Hooves, tied to the run cycle rather than a timer, so the sound
+        // lands on the legs. Only the animal nearest the fence gets them —
+        // four sets of footsteps at once is a stampede, not a flock.
+        if (s.lift < 4 && s.v > 0) {
+          var half = Math.floor(s.wobble / 2);
+          if (half !== s.step) {
+            s.step = half;
+            if (Math.abs(s.x - FENCE_X) < SPAN * 1.6) play('step', 0.30, 0.16);
+          }
+        }
 
         if (s.x < -110) {
           if (!s.wolf && !s.counted) lapse('one got past you');
@@ -840,13 +1019,33 @@ canvas{grid-area:1/1;align-self:center;display:block;width:100%;height:auto;touc
       var d = Math.sqrt(dx * dx + dy * dy);
       if (d < 66 && d < bestD) { best = s; bestD = d; }
     });
-    if (!best) return;
+    /* Tapping a sheep that has not jumped yet.
+       Not a penalty — it never has been — but it is the one rule people get
+       wrong, and a sound that says "you found it, you were early" teaches it
+       in a way the paragraph on the panel does not.
+
+       It deliberately does NOT fire on a tap at open grass. Someone hunting
+       around the field would otherwise get a noise on every stab, which is
+       nagging rather than teaching. You have to have actually hit an animal. */
+    if (!best) {
+      var early = null, ed = 999;
+      sheep.forEach(function (s) {
+        if (s.lift >= 30 || s.v === 0) return;
+        var f = FRAMES[frameFor(s)];
+        var dx = s.x - px, dy = (FOOT - s.lift - f[3] * SCALE / 2) - py;
+        var d = Math.sqrt(dx * dx + dy * dy);
+        if (d < 66 && d < ed) { early = s; ed = d; }
+      });
+      if (early) play('miss', 0.5, 0.35);
+      return;
+    }
 
     var fy = FOOT - best.lift - FRAMES[frameFor(best)][3] * SCALE;
 
     if (best.wolf) {
       marks.push({ x: best.x, y: fy - 8, text: '✕', life: 0.9, bad: true });
       best.counted = true;                       // so it cannot cost twice
+      play('wolf', 0.85);
       lapse('that one was a wolf');
       return;
     }
@@ -854,10 +1053,22 @@ canvas{grid-area:1/1;align-self:center;display:block;width:100%;height:auto;touc
 
     best.counted = true;
     counted++;
+    streak++;
     countEl.textContent = counted;
     capEl.textContent = 'sheep counted';
     marks.push({ x: best.x, y: fy - 8, text: String(counted), life: 0.9, bad: false });
     bump();
+
+    /* One sound, not three. A milestone beats a streak beats a plain count —
+       two rewards arriving together reads as a bug rather than as twice the
+       reward. The milestones are the murmur thresholds, so the line that
+       drifts across the field and the sound that marks it are the same
+       moment rather than two competing ones. */
+    var big = false;
+    for (var q = 0; q < MURMURS.length; q++) if (counted === MURMURS[q][0]) big = true;
+    if (big)                   play('milestone', 0.9);
+    else if (streak % 10 === 0) play('streak', 0.8);
+    else                        play('count', 0.75);
   }
 
   function pointAt(ev) {
