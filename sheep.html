@@ -486,7 +486,13 @@ canvas{grid-area:1/1;align-self:center;display:block;width:100%;height:auto;touc
   var GROUND = H * 0.70;          // where the sheep walk
   var FENCE_X = W * 0.40;         // they jump here
   var FENCE_TOP = 64;             // how far the rails stand above the ground
-  var SPAN = 190;                 // how far out the take-off and landing are
+  /* How far out the take-off and landing are. Narrower than it was (190),
+     which makes the hop quicker and punchier without touching how fast the
+     sheep cross or when they spawn — so the server's check on round length,
+     which is built from the spawn schedule alone, is unaffected. It does
+     shorten the window you have to tap one: at a count of 100 you get 0.80
+     seconds instead of 0.95. */
+  var SPAN = 160;                 // how far out the take-off and landing are
   var HEIGHT = 150;               // apex of the arc
   var FOOT = GROUND + 34;         // the line their hooves stand on
 

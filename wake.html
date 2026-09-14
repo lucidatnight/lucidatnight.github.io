@@ -88,10 +88,37 @@ canvas{grid-area:1/1;align-self:center;display:block;width:100%;height:auto;touc
   font-variant-numeric:tabular-nums;line-height:1;
 }
 .best span{font-size:9.5px;letter-spacing:.24em;text-transform:uppercase;color:var(--glow);font-weight:500}
+.best.quiet b{color:var(--glow)}
 
 .rules{display:flex;gap:26px;flex-wrap:wrap;justify-content:center}
 .rule{display:flex;align-items:center;gap:9px;font-size:12.5px;color:var(--glow);line-height:1.5}
 .rule b{font-family:var(--type);color:var(--dream);font-weight:400;font-size:15px}
+
+/* the board — the same furniture as Counting Sheep, deliberately: two games
+   on one site should not have two different ideas of what a score list is */
+.board{border:1px solid var(--edge);border-radius:3px;padding:20px 22px 18px;background:var(--deep)}
+.bhead{
+  display:flex;align-items:baseline;justify-content:space-between;gap:14px;
+  padding-bottom:12px;margin-bottom:6px;border-bottom:1px solid var(--edge);
+}
+.btitle{font-family:var(--type);font-size:11.5px;letter-spacing:.28em;text-transform:uppercase;color:var(--dream)}
+.bnote{font-size:11px;color:var(--glow);letter-spacing:.04em}
+.brow{
+  display:flex;align-items:baseline;gap:12px;padding:7px 0;font-size:14px;color:var(--dream);
+  border-bottom:1px solid rgba(168,155,200,.07);
+}
+.brow:last-child{border-bottom:none}
+.brow .r{
+  font-family:var(--type);font-size:12px;color:var(--glow);width:2.4em;flex:none;
+  font-variant-numeric:tabular-nums;
+}
+.brow .h{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.brow .s{font-family:var(--type);color:var(--gold);font-variant-numeric:tabular-nums}
+.brow.me{color:var(--lunar)}
+.brow .you{color:var(--glow);font-size:12px;margin-left:7px}
+.brow.gap{border-top:1px solid var(--edge);margin-top:4px;padding-top:11px}
+.bempty{font-size:13px;color:var(--glow);line-height:1.7;padding:6px 0 2px}
+.bfoot{font-size:11.5px;color:var(--glow);line-height:1.6;padding-top:12px}
 
 .foot{font-size:12px;color:var(--glow);line-height:1.7;text-align:center;max-width:56ch;margin:0 auto}
 @media (prefers-reduced-motion:reduce){*{transition:none!important}}
@@ -119,6 +146,7 @@ canvas{grid-area:1/1;align-self:center;display:block;width:100%;height:auto;touc
       </div>
       <div class="bests" id="bests" hidden>
         <span class="best"><b id="myBest">0</b><span>your best</span></span>
+        <span class="best quiet"><b id="topBest">—</b><span id="topWho">furthest</span></span>
       </div>
       <div class="endrow">
         <button class="btn" id="go" disabled>Loading…</button>
@@ -128,7 +156,16 @@ canvas{grid-area:1/1;align-self:center;display:block;width:100%;height:auto;touc
     </div>
   </div>
 
-  <p class="foot">Your best is kept in this browser. There is no leaderboard for this one yet.</p>
+  <div class="board">
+    <div class="bhead">
+      <span class="btitle">Leaderboard</span>
+      <span class="bnote" id="bnote"></span>
+    </div>
+    <div id="brows"></div>
+    <p class="bfoot" id="bfoot"></p>
+  </div>
+
+  <p class="foot">Distances are in feet, and a foot here is whatever the dream says it is.</p>
 </div>
 
 <script>
@@ -148,11 +185,158 @@ canvas{grid-area:1/1;align-self:center;display:block;width:100%;height:auto;touc
   var goBtn = document.getElementById('go');
   var bestsEl = document.getElementById('bests');
   var myBestEl = document.getElementById('myBest');
+  var topBestEl = document.getElementById('topBest');
+  var topWhoEl = document.getElementById('topWho');
+  var bnoteEl = document.getElementById('bnote');
+  var browsEl = document.getElementById('brows');
+  var bfootEl = document.getElementById('bfoot');
 
   var calm = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  /* ── scores ──────────────────────────────────────────────
+     The same two places as Counting Sheep, answering the same two questions.
+     The browser keeps your own best, so the game works signed out, offline and
+     on a first visit. The server keeps the board, which needs an account,
+     because a list of numbers with nobody attached is not a leaderboard. */
+  var API = 'https://dualuse.tailb152cd.ts.net';
   var BEST_KEY = 'lucid_wake_best';
   function best()      { try { return Math.max(0, Number(localStorage.getItem(BEST_KEY)) || 0); } catch (e) { return 0; } }
   function keepBest(n) { try { if (n > best()) localStorage.setItem(BEST_KEY, String(n)); } catch (e) {} }
+  function token()     { try { return localStorage.getItem('lucid_token'); } catch (e) { return null; } }
+
+  var board = null;          // what the server last told us
+  var reachable = true;      // false once a request fails, so we say so plainly
+
+  function esc(s) {
+    return String(s).replace(/[&<>"]/g, function (c) {
+      return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c];
+    });
+  }
+
+  // Whichever is higher. Somebody who played signed out and then signed in
+  // should not be told their best is zero.
+  function myBestNumber() {
+    return Math.max(best(), (board && board.you && board.you.best) || 0);
+  }
+
+  function feet(n) { return String(n).replace(/\B(?=(\d{3})+(?!\d))/g, ','); }
+
+  function paintBest() {
+    var mine = myBestNumber();
+    myBestEl.textContent = feet(mine);
+    if (board && board.top && board.top.length) {
+      topBestEl.textContent = feet(board.top[0].best);
+      topWhoEl.textContent = board.top[0].handle + ' leads';
+    } else {
+      topBestEl.textContent = '—';
+      topWhoEl.textContent = 'furthest';
+    }
+    // Shown as soon as the board has been reached, even when it is empty: an
+    // empty pair of numbers under their labels tells you where your score will
+    // land, where hiding them just leaves people asking where the board went.
+    bestsEl.hidden = !(mine > 0 || board);
+  }
+
+  function row(rank, handle, score, me, gap) {
+    return '<div class="brow' + (me ? ' me' : '') + (gap ? ' gap' : '') + '">' +
+           '<span class="r">' + rank + '</span>' +
+           '<span class="h">' + esc(handle) + (me ? '<span class="you">— you</span>' : '') + '</span>' +
+           '<span class="s">' + feet(score) + '</span></div>';
+  }
+
+  function paintBoard() {
+    // The board coming back with a "you" on it is proof of a session, whatever
+    // this page can or cannot find in its own storage.
+    var signedIn = !!token() || !!(board && board.you);
+
+    if (!board) {
+      browsEl.innerHTML = '<p class="bempty">' +
+        (reachable ? 'Fetching the board…'
+                   : 'The board is out of reach right now. Your own best is kept in this browser either way.') +
+        '</p>';
+      bnoteEl.textContent = '';
+      bfootEl.textContent = '';
+      return;
+    }
+
+    var top = board.top || [];
+    var you = board.you;
+    var html = '';
+
+    if (!top.length) {
+      html = '<p class="bempty">Nobody has hit one yet. The first person to land a swing is top of it.</p>';
+    } else {
+      for (var i = 0; i < top.length; i++) {
+        var mine = !!(you && you.handle === top[i].handle);
+        html += row(i + 1, top[i].handle, top[i].best, mine, false);
+      }
+      // If you are not on the visible part of the board, your own line goes
+      // underneath it, so the board always answers "where am I".
+      if (you && you.best > 0 && you.rank > top.length) {
+        html += row(you.rank, you.handle, you.best, true, true);
+      }
+    }
+    browsEl.innerHTML = html;
+
+    bnoteEl.textContent = board.players
+      ? board.players + (board.players === 1 ? ' dreamer' : ' dreamers')
+      : '';
+
+    if (!signedIn) {
+      bfootEl.textContent = 'Your best is kept in this browser. Sign in on Lucid and it goes on the board with your name.';
+    } else if (!you || !you.best) {
+      bfootEl.textContent = 'Land one swing and you are on it.';
+    } else if (!reachable) {
+      bfootEl.textContent = 'The board could not be reached just now — this is the last version of it.';
+    } else {
+      bfootEl.textContent = 'Ties go to whoever got there first.';
+    }
+  }
+
+  function loadBoard() {
+    var t = token();
+    // credentials go too. The bearer token lives in localStorage, which is
+    // per-origin, so anybody who signed in before the site moved domain has
+    // only the session cookie left — sending it is what keeps them signed in.
+    fetch(API + '/api/wake', {
+      credentials: 'include',
+      headers: t ? { Authorization: 'Bearer ' + t } : {}
+    })
+      .then(function (r) { if (!r.ok) throw new Error('no board'); return r.json(); })
+      .then(function (d) { reachable = true; board = d; paintBoard(); paintBest(); })
+      .catch(function () { reachable = false; paintBoard(); });
+  }
+
+  /* A finished flight. The local best is kept whatever the server says — a
+     game that loses your score because a server was down is a worse game.
+
+     The taps go with it. The server cannot check much here (a soft swing
+     cannot reach the clouds, and a distance implies a minimum time in the
+     air), but it can check that much, and it needs the tap count to do it. */
+  function submit(score, ms, tapCount) {
+    keepBest(score);
+    paintBest();
+
+    // No early return on a missing token: whether the round counts is the
+    // server's call, not the page's, and it takes a cookie as readily.
+    var t = token();
+    var headers = { 'Content-Type': 'application/json' };
+    if (t) headers.Authorization = 'Bearer ' + t;
+
+    fetch(API + '/api/wake', {
+      method: 'POST',
+      credentials: 'include',
+      headers: headers,
+      body: JSON.stringify({ score: score, ms: ms, taps: tapCount })
+    })
+      .then(function (r) { return r.ok ? r.json() : null; })
+      .then(function (d) {
+        if (!d) return;
+        reachable = true; board = d;
+        paintBoard(); paintBest();
+      })
+      .catch(function () { reachable = false; paintBoard(); });
+  }
 
   /* Same two widths as Counting Sheep, for the same reason: one fixed
      1480-wide rectangle scaled down to a 390px phone puts the boy at the size
@@ -367,13 +551,8 @@ canvas{grid-area:1/1;align-self:center;display:block;width:100%;height:auto;touc
   var state = 'idle';     // idle | count | charge | wham | fly | done
   var taps = 0, power = 0, tSince = 0, beatIx = 0;
   var clock = null, camX = 0, camY = 0, shake = 0, flash = 0, swingT = 0, bounces = 0;
-  var dist = 0, sparks = [], rolling = false;
+  var dist = 0, sparks = [], rolling = false, flightStart = 0;
   var last = 0, acc = 0;
-
-  function paintBest() {
-    myBestEl.textContent = best();
-    bestsEl.hidden = best() <= 0;
-  }
 
   function start() {
     if (broken) { location.reload(); return; }
@@ -397,6 +576,10 @@ canvas{grid-area:1/1;align-self:center;display:block;width:100%;height:auto;touc
       vmax: VMAX0 + power * P.top,
       spin: 0, rot: 0
     };
+    // When the bat connects. The server checks a distance against the time it
+    // was in the air, so what it wants is the flight, not the whole round —
+    // the three seconds of tapping beforehand would only pad the number.
+    flightStart = performance.now();
     chain = 0; bestChain = 0;
     flash = 1; shake = 18;
     for (var i = 0; i < 22; i++) {
@@ -470,10 +653,10 @@ canvas{grid-area:1/1;align-self:center;display:block;width:100%;height:auto;touc
 
   function done() {
     state = 'done';
-    var beat = dist > best();
-    keepBest(dist);
-    paintBest();
-    vh.textContent = dist + ' feet.';
+    var was = myBestNumber();
+    var beat = dist > was;
+    submit(dist, Math.round(performance.now() - flightStart), taps);
+    vh.textContent = feet(dist) + ' feet.';
     vp.textContent = dist < 600
       ? 'It never got near the clouds. You have three seconds — use all of them.'
       : dist < 4000
@@ -485,7 +668,7 @@ canvas{grid-area:1/1;align-self:center;display:block;width:100%;height:auto;touc
             : 'That is near the end of the dream. There is not much sky past this.';
     vs.textContent = beat && dist > 0
       ? 'Your best yet.'
-      : 'Your best is ' + best() + ' feet.';
+      : 'Your best is ' + feet(was) + ' feet.';
     vrules.hidden = true;
     giveEl.hidden = false;
     goBtn.textContent = 'Again';
@@ -847,6 +1030,8 @@ canvas{grid-area:1/1;align-self:center;display:block;width:100%;height:auto;touc
   goBtn.addEventListener('click', start);
 
   paintBest();
+  paintBoard();
+  loadBoard();
   last = performance.now();
   requestAnimationFrame(frame);
 })();
