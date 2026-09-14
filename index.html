@@ -604,7 +604,7 @@ try {
 } catch (e) {}
 var viewing = null;       // handle being looked at
 var flash = null;         // {t:'err'|'ok', m:string}
-var cache = { posts: [], profile: null, encounters: null, submissions: null, pulse: null, sheep: null };
+var cache = { posts: [], profile: null, encounters: null, submissions: null, pulse: null, sheep: null, wake: null };
 // Held outside the DOM so a re-render does not lose a picked drawing.
 var mwDrawing = null;
 // What is typed in the feed's search box, and whether it should keep focus
@@ -1222,6 +1222,28 @@ function sheepBest(){
   // Shared with the game: same site, same browser, same key.
   try { return Math.max(0, Number(localStorage.getItem('lucid_sheep_best')) || 0); } catch(e){ return 0; }
 }
+function wakeBest(){
+  try { return Math.max(0, Number(localStorage.getItem('lucid_wake_best')) || 0); } catch(e){ return 0; }
+}
+
+/* The line under a game's name on its card.
+
+   Both games have the same four things to say — your best, who leads, whether
+   anybody has beaten you, whether anybody has played at all — so they say them
+   in the same words. What differs is the unit and what an empty board sounds
+   like, and those are the two arguments. Written out twice, the second one
+   drifts from the first the next time either is edited. */
+function gameLine(b, own, unit, empty){
+  var mine = Math.max(own, (b && b.you && b.you.best) || 0);
+  var lead = b && b.top && b.top.length ? b.top[0] : null;
+  function n(v){ return v.toLocaleString() + unit; }
+  if (mine && lead && lead.best > mine) return 'Your best is ' + n(mine) + '. ' + esc(lead.handle) + ' leads with ' + n(lead.best) + '.';
+  if (mine && lead)                     return 'Your best is ' + n(mine) + ', and nobody has beaten it.';
+  if (mine)                             return 'Your best is ' + n(mine) + '.';
+  if (lead)                             return esc(lead.handle) + ' leads with ' + n(lead.best) + '.';
+  if (b)                                return empty;
+  return '';
+}
 
 /* ── the common dreams ───────────────────────────────────
    Twelve cards. Each one is a real finding or an honest admission that there
@@ -1730,16 +1752,8 @@ function dreamCount(n, mine){
 }
 
 function gamesView(){
-  var b = cache.sheep;
-  var mine = Math.max(sheepBest(), (b && b.you && b.you.best) || 0);
-  var leader = b && b.top && b.top.length ? b.top[0] : null;
-
-  var line = '';
-  if (mine && leader && leader.best > mine)      line = 'Your best is ' + mine + '. ' + esc(leader.handle) + ' leads with ' + leader.best + '.';
-  else if (mine && leader && leader.best <= mine) line = 'Your best is ' + mine + ', and nobody has beaten it.';
-  else if (mine)                                  line = 'Your best is ' + mine + '.';
-  else if (leader)                                line = esc(leader.handle) + ' leads with ' + leader.best + '.';
-  else if (b)                                     line = 'Nobody has counted a sheep yet.';
+  var line  = gameLine(cache.sheep, sheepBest(), '', 'Nobody has counted a sheep yet.');
+  var wline = gameLine(cache.wake,  wakeBest(), ' feet', 'Nobody has hit one yet.');
 
   return flashHTML()
     + '<div class="pl-head">Can\'t sleep?</div>'
@@ -1773,6 +1787,7 @@ function gamesView(){
     +       '<span class="gdesc">Tap as fast as you can for three seconds. Your alarm clock '
     +         'gets hit with a baseball bat and flies out of the bedroom, and every cloud it '
     +         'clips throws it further. Go further than last time.</span>'
+    +       (wline ? '<span class="gmeta">' + wline + '</span>' : '')
     +     '</span>'
     +     '<span class="gplay">Play</span>'
     +   '</span>'
@@ -2166,7 +2181,7 @@ function wire(){
       if (v === 'settings'){ view = 'settings'; render(); window.scrollTo(0,0); return; }
       if (v === 'mall'){ view = 'mall'; render(); window.scrollTo(0,0); loadSubmissions(); return; }
       if (v === 'pulse'){ view = 'pulse'; render(); window.scrollTo(0,0); loadPulse(); return; }
-      if (v === 'games'){ view = 'games'; render(); window.scrollTo(0,0); loadSheep(); return; }
+      if (v === 'games'){ view = 'games'; render(); window.scrollTo(0,0); loadSheep(); loadWake(); return; }
       if (v === 'dreams'){ view = 'dreams'; openDream = null; render(); window.scrollTo(0,0); loadDreams(); return; }
       view = v; render();
     };
@@ -2597,6 +2612,11 @@ function loadPulse(){
 function loadSheep(){
   return api('/api/sheep')
     .then(function(d){ cache.sheep = d; if (view === 'games') render(); })
+    .catch(function(){});
+}
+function loadWake(){
+  return api('/api/wake')
+    .then(function(d){ cache.wake = d; if (view === 'games') render(); })
     .catch(function(){});
 }
 
