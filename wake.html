@@ -198,7 +198,7 @@ canvas{grid-area:1/1;align-self:center;display:block;width:100%;height:auto;touc
      The browser keeps your own best, so the game works signed out, offline and
      on a first visit. The server keeps the board, which needs an account,
      because a list of numbers with nobody attached is not a leaderboard. */
-  var API = 'https://dualuse.tailb152cd.ts.net';
+  var API = 'https://sentinel.tailb152cd.ts.net';
   var BEST_KEY = 'lucid_wake_best';
   function best()      { try { return Math.max(0, Number(localStorage.getItem(BEST_KEY)) || 0); } catch (e) { return 0; } }
   function keepBest(n) { try { if (n > best()) localStorage.setItem(BEST_KEY, String(n)); } catch (e) {} }
