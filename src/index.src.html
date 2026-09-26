@@ -1,0 +1,2396 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Lucid</title>
+<meta name="description" content="A place to write down what you saw, before it goes. Dream journal, shared feed, and the Mall World drawings.">
+<link rel="canonical" href="https://lucidatnight.com/">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Lucid">
+<meta property="og:url" content="https://lucidatnight.com/">
+<meta property="og:title" content="Lucid — enter the dreaming mind">
+<meta property="og:description" content="Write down what you saw, before it goes. A shared feed of dreams, and an open question about the mall thousands of people keep waking up in.">
+<meta property="og:image" content="https://lucidatnight.com/preview.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="Lucid — Enter the dreaming mind, in typewriter type on a starfield.">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Lucid — enter the dreaming mind">
+<meta name="twitter:description" content="Write down what you saw, before it goes. A shared feed of dreams, and an open question about the mall thousands of people keep waking up in.">
+<meta name="twitter:image" content="https://lucidatnight.com/preview.png">
+<meta name="theme-color" content="#000000">
+<link rel="manifest" href="/manifest.json">
+<link rel="apple-touch-icon" href="/icon-180.png">
+<link rel="icon" type="image/png" sizes="192x192" href="/icon-192.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Lucid">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<!-- The typeface does not come from Google any more.
+     Inter was fetched from Google's font servers, which meant every visitor's
+     browser handed Google their IP address and user agent — on every page,
+     before signing up, including someone who only ever reads the front page
+     once and leaves. Lucid stores no IP addresses of its own, so a font was
+     the single thing on this site giving a stranger's address to a company.
+
+     The system face costs nothing, needs no network, and cannot leak anything.
+     The typewriter face is what Lucid actually sounds like, and that one has
+     always been base64 inside this file. -->
+<style>
+@font-face{
+  font-family:'Secret Typewriter';
+  src:url(__FONT_URI__) format('woff2');
+  font-weight:400; font-style:normal; font-display:swap;
+}
+:root{
+  --night:#000; --deep:#070709; --void:#0e0e18; --mist:#191926;
+  --lunar:#e8e4f0; --dream:#a89bc8; --glow:#7b6fa8; --pulse:#c4b5e8;
+  --gold:#d4af6a; --error:#e07070; --ok:#70b890;
+  --edge:rgba(168,155,200,.16);
+  --type:'Secret Typewriter','Courier New',Courier,monospace;
+  --sans:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'Helvetica Neue',Arial,sans-serif;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html{-webkit-text-size-adjust:100%}
+body{background:var(--night);color:var(--lunar);font-family:var(--sans);font-weight:300;line-height:1.6;min-height:100vh;overflow-x:hidden}
+#stars{position:fixed;inset:0;pointer-events:none;z-index:0}
+.star{position:absolute;background:#fff;border-radius:50%;animation:tw var(--d,3s) ease-in-out infinite;opacity:var(--o,.4)}
+@keyframes tw{0%,100%{opacity:var(--o,.4)}50%{opacity:.08}}
+#aura{position:fixed;width:900px;height:900px;border-radius:50%;background:radial-gradient(circle,rgba(123,111,168,.13) 0%,transparent 68%);top:-420px;left:50%;transform:translateX(-50%);pointer-events:none;z-index:0;animation:br 11s ease-in-out infinite}
+@keyframes br{0%,100%{transform:translateX(-50%) scale(1);opacity:.75}50%{transform:translateX(-50%) scale(1.14);opacity:1}}
+@keyframes rise{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+#app{position:relative;z-index:1}
+
+/* ── shared controls ─────────────────────── */
+.eyebrow{font-size:10px;letter-spacing:.24em;text-transform:uppercase;color:var(--glow);font-weight:500}
+.card{background:var(--deep);border:1px solid var(--edge);border-radius:3px;padding:26px}
+.btn{font-family:var(--sans);font-size:11px;font-weight:600;letter-spacing:.18em;text-transform:uppercase;background:var(--dream);color:var(--night);border:none;border-radius:2px;padding:14px 24px;cursor:pointer;transition:background .25s,opacity .25s}
+.btn:hover:not(:disabled){background:var(--pulse)}
+.btn:disabled{opacity:.35;cursor:not-allowed}
+.btn.wide{width:100%}
+.ghost.wide{width:100%}
+/* the blind question, on the signed-out panel right after signup */
+.ask-q{font-family:var(--type);font-size:23px;font-weight:400;color:var(--lunar);margin-top:12px;line-height:1.35;text-wrap:balance}
+.ghost{font-family:var(--sans);font-size:11px;font-weight:500;letter-spacing:.16em;text-transform:uppercase;background:none;border:1px solid var(--edge);color:var(--dream);border-radius:2px;padding:11px 20px;cursor:pointer;transition:border-color .25s,color .25s}
+.ghost:hover{border-color:var(--glow);color:var(--pulse)}
+input[type=text],input[type=email],input[type=password],textarea{width:100%;background:var(--night);border:1px solid var(--edge);border-radius:2px;color:var(--lunar);font-family:var(--sans);font-size:15px;font-weight:300;padding:13px 15px;transition:border-color .25s}
+input:focus,textarea:focus{border-color:var(--glow);outline:none}
+input::placeholder,textarea::placeholder{color:#4a4470}
+/* The two boxes you actually type into — the dream you are writing, and the
+   word you are searching for — get plain white instead of the lavender the
+   rest of the page uses. Everything else on this site is somebody else's
+   words; these two are yours while you are in them, and they should read
+   brighter than what surrounds them. The placeholder stays dim, so an empty
+   box still looks empty. */
+.composer textarea, .srch input{color:#fff}
+.fl{display:block;font-size:10px;letter-spacing:.2em;text-transform:uppercase;color:var(--glow);margin-bottom:9px;font-weight:500}
+.hint{font-size:12.5px;color:var(--glow);line-height:1.6}
+.stack{display:flex;flex-direction:column;gap:20px}
+.row{display:flex;align-items:center;gap:14px;flex-wrap:wrap}
+.spread{display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap}
+.msg{font-size:13.5px;padding:11px 14px;border-radius:2px}
+.msg.err{background:rgba(224,112,112,.1);color:var(--error);border:1px solid rgba(224,112,112,.28)}
+.msg.ok{background:rgba(112,184,144,.1);color:var(--ok);border:1px solid rgba(112,184,144,.28)}
+button:focus-visible,a:focus-visible,input:focus-visible,textarea:focus-visible{outline:1px solid var(--pulse);outline-offset:3px}
+
+/* ── offline banner ──────────────────────── */
+#offline{position:fixed;top:0;left:0;right:0;z-index:99;background:#1a0f0f;border-bottom:1px solid rgba(224,112,112,.4);color:#f0c4c4;font-size:13px;padding:11px 20px;text-align:center;display:none}
+#offline.show{display:block}
+#offline b{color:var(--error);font-weight:500}
+
+/* ── dreamer counter ─────────────────────── */
+#counter{
+  position:fixed;right:18px;bottom:16px;z-index:50;
+  font-size:10px;letter-spacing:.2em;text-transform:uppercase;
+  color:var(--glow);background:rgba(0,0,0,.72);backdrop-filter:blur(8px);
+  border:1px solid var(--edge);border-radius:99px;padding:8px 15px;
+  font-variant-numeric:tabular-nums;opacity:0;transition:opacity .6s ease;
+  pointer-events:none;
+}
+#counter.show{opacity:1}
+#counter b{color:var(--pulse);font-weight:600}
+@media(max-width:560px){#counter{right:12px;bottom:12px;font-size:9px;padding:7px 12px}}
+
+/* ── landing ─────────────────────────────── */
+.wrap{display:grid;grid-template-columns:1fr 1fr;min-height:100vh}
+.hero{display:flex;flex-direction:column;justify-content:center;padding:70px 60px;position:relative}
+.hero .wordmark{
+  font-size:clamp(44px, 8.2vw, 78px);
+  letter-spacing:.14em;line-height:1;
+  margin-bottom:38px;
+}
+.wordmark{font-family:var(--type);font-size:22px;letter-spacing:.24em;text-transform:uppercase;color:var(--lunar);margin-bottom:60px}
+.wordmark .d{color:var(--gold)}
+.hero h1{font-family:var(--type);font-size:clamp(30px, 4.4vw, 42px);font-weight:400;line-height:1.2;margin-bottom:24px;text-wrap:balance}
+.hero h1 .em{color:var(--pulse)}
+.hero p{color:var(--dream);font-size:16px;line-height:1.8;max-width:42ch;margin-bottom:44px}
+.badge{display:inline-flex;align-items:center;gap:10px;align-self:flex-start;font-size:10px;letter-spacing:.2em;text-transform:uppercase;color:var(--glow);border:1px solid var(--edge);border-radius:99px;padding:9px 20px}
+.badge .dot{width:5px;height:5px;border-radius:50%;background:var(--pulse);animation:pulse 2.6s ease-in-out infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.25}}
+.moon{width:44px;height:44px;margin-top:56px;opacity:.85}
+.authpanel{display:flex;flex-direction:column;justify-content:center;padding:70px 60px;background:var(--void);border-left:1px solid var(--edge)}
+.authinner{max-width:380px;width:100%}
+.tabs{display:flex;gap:28px;border-bottom:1px solid var(--edge);margin-bottom:32px}
+.tab{font-family:var(--sans);font-size:11px;font-weight:500;letter-spacing:.16em;text-transform:uppercase;background:none;border:none;border-bottom:1px solid transparent;color:var(--glow);padding:0 0 14px;margin-bottom:-1px;cursor:pointer;transition:color .25s,border-color .25s}
+.tab.on{color:var(--lunar);border-bottom-color:var(--dream)}
+.form{display:none}
+.form.on{display:block}
+
+/* ── key reveal ──────────────────────────── */
+.keybox{border:1px solid rgba(212,175,106,.3);border-radius:3px;background:rgba(212,175,106,.05);padding:22px}
+.private{display:inline-flex;align-items:center;gap:7px;font-size:9.5px;letter-spacing:.2em;text-transform:uppercase;color:var(--gold);border:1px solid rgba(212,175,106,.35);border-radius:99px;padding:4px 10px;font-weight:500}
+.keyval{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:22px;letter-spacing:.16em;color:var(--gold);margin:12px 0;transition:filter .3s}
+.keyval.blur{filter:blur(9px);user-select:none}
+
+/* ── app shell ───────────────────────────── */
+.shell{max-width:660px;margin:0 auto;padding:0 24px 120px}
+.topbar{position:sticky;top:0;z-index:20;background:linear-gradient(to bottom,rgba(0,0,0,.96) 62%,rgba(0,0,0,0));backdrop-filter:blur(14px);display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;padding:20px 0 24px}
+.topbar .wordmark{font-size:21px;margin:0}
+.nav{display:flex;gap:0;flex-wrap:wrap;justify-content:flex-end}
+.nav button{font-family:var(--sans);font-size:10.5px;font-weight:500;letter-spacing:.1em;text-transform:uppercase;white-space:nowrap;background:none;border:none;color:var(--glow);padding:8px 10px;border-radius:2px;cursor:pointer;transition:color .25s,background .25s}
+.nav button:hover{color:var(--pulse)}
+.nav button.on{color:var(--night);background:var(--dream)}
+.nav #topSignout{color:#4a4470;margin-left:4px}
+.nav #topSignout:hover{color:var(--error)}
+
+.av{border-radius:50%;background:var(--mist);flex:none;display:grid;place-items:center;overflow:hidden;font-family:var(--type);color:var(--pulse);border:1px solid var(--edge)}
+.av img{width:100%;height:100%;object-fit:cover;display:block}
+.av.s{width:38px;height:38px;font-size:15px}
+.av.l{width:88px;height:88px;font-size:32px}
+
+.composer textarea{min-height:104px;resize:vertical;font-family:var(--type);font-size:17px;font-weight:400;line-height:1.72}
+/* The composer, closed. One line, the same width and edge as the card it
+   becomes, so opening it reads as the same object growing rather than a
+   different one appearing. */
+.writebar{
+  display:flex;align-items:center;justify-content:space-between;gap:18px;width:100%;
+  background:var(--deep);border:1px solid var(--edge);border-radius:3px;
+  padding:21px 24px;text-align:left;font:inherit;cursor:pointer;
+  transition:border-color .25s;
+}
+.writebar:hover{border-color:rgba(168,155,200,.4)}
+.wb-q{font-family:var(--type);font-size:17px;line-height:1.4;color:var(--glow);transition:color .25s}
+.writebar:hover .wb-q{color:var(--dream)}
+.writebar.has .wb-q{color:var(--gold)}
+.wb-go{flex:none;font-size:10px;font-weight:600;letter-spacing:.2em;text-transform:uppercase;color:var(--dream);transition:color .25s}
+.writebar:hover .wb-go{color:var(--pulse)}
+.crow{display:flex;align-items:center;gap:18px}
+.cclose{background:none;border:none;padding:6px 0;cursor:pointer;font-family:var(--sans);
+  font-size:10px;font-weight:500;letter-spacing:.18em;text-transform:uppercase;color:var(--glow);transition:color .2s}
+.cclose:hover{color:var(--dream)}
+@media (max-width:520px){ .writebar{padding:18px 16px} .wb-q{font-size:15.5px} }
+.count{font-size:11px;color:var(--glow);font-variant-numeric:tabular-nums;letter-spacing:.06em}
+.count.warn{color:var(--gold)}
+.count.over{color:var(--error)}
+
+/* search */
+.srch{position:relative;margin-top:30px}
+.srch input{padding-left:38px;padding-right:80px;font-size:14.5px}
+.srch .mag{position:absolute;left:14px;top:50%;transform:translateY(-50%);color:var(--glow);font-size:14px;pointer-events:none;line-height:1}
+.srch .clr{position:absolute;right:10px;top:50%;transform:translateY(-50%);background:none;border:none;color:var(--glow);font-size:10px;letter-spacing:.14em;text-transform:uppercase;cursor:pointer;padding:6px 8px}
+.srch .clr:hover{color:var(--pulse)}
+.srchnote{font-size:12.5px;color:var(--glow);margin-top:10px;line-height:1.6}
+mark{background:rgba(212,175,106,.26);color:var(--lunar);border-radius:2px;padding:0 2px}
+.feed{display:flex;flex-direction:column;margin-top:34px}
+.post{padding:24px 0;border-top:1px solid var(--edge);display:grid;grid-template-columns:38px 1fr;gap:16px;animation:rise .45s ease both}
+.post-head{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;margin-bottom:7px}
+.handle{font-size:13px;font-weight:500;color:var(--lunar);background:none;border:none;padding:0;cursor:pointer;font-family:var(--sans);transition:color .2s}
+.handle:hover{color:var(--pulse)}
+.when{font-size:11px;color:var(--glow);letter-spacing:.08em;text-transform:uppercase}
+.post-body{font-family:var(--type);font-size:18px;font-weight:400;line-height:1.72;color:#ded8ec;white-space:pre-wrap;word-break:break-word}
+.mine .handle{color:var(--gold)}
+.del{font-size:10px;letter-spacing:.14em;text-transform:uppercase;background:none;border:none;color:#4a4470;cursor:pointer;padding:0;font-family:var(--sans);transition:color .2s}
+.del:hover{color:var(--error)}
+/* Deliberately the quietest thing on a post. A report button that shouts is a
+   report button people press to disagree with somebody. */
+.rep{font-size:10px;letter-spacing:.14em;text-transform:uppercase;background:none;border:none;color:#3a3558;cursor:pointer;padding:0;font-family:var(--sans);transition:color .2s}
+.rep:hover{color:var(--dream)}
+
+/* the panel that slides over everything for a report, or for a word with
+   somebody who has just written something about themselves */
+.sheet{position:fixed;inset:0;z-index:60;display:flex;align-items:center;justify-content:center;padding:20px;background:rgba(0,0,0,.72);backdrop-filter:blur(3px);overflow-y:auto}
+.sheet-box{width:100%;max-width:460px;margin:auto;background:var(--deep);border:1px solid var(--edge);border-top:2px solid var(--gold);border-radius:3px;padding:28px 26px}
+.sheet-box h3{font-family:var(--type);font-size:24px;font-weight:400;color:var(--lunar);margin-bottom:12px;line-height:1.25}
+.sheet-small{font-size:13px;color:var(--glow);line-height:1.7;margin-bottom:18px}
+.sheet-row{display:flex;gap:10px;justify-content:flex-end;margin-top:20px;flex-wrap:wrap}
+.sheet-err{font-size:12.5px;color:var(--error);line-height:1.6;margin-top:12px;min-height:1px}
+.reasons{display:flex;flex-direction:column;gap:2px;margin-bottom:14px}
+.reason{display:flex;align-items:flex-start;gap:11px;padding:9px 0;font-size:14px;color:var(--dream);cursor:pointer;line-height:1.5}
+.reason input{margin-top:3px;accent-color:var(--pulse);flex:none}
+.reason:hover span{color:var(--lunar)}
+.sheet-box textarea{width:100%;min-height:70px;background:var(--void);border:1px solid var(--edge);border-radius:2px;color:var(--dream);padding:12px 14px;font-family:var(--sans);font-size:14px;line-height:1.6;resize:vertical}
+.sheet-box textarea:focus{outline:none;border-color:var(--glow)}
+.care{border-left:2px solid var(--gold);padding:2px 0 2px 18px;margin:18px 0}
+.care-lead{font-size:14px;color:var(--dream);line-height:1.7;margin-bottom:14px}
+.care-list{list-style:none;font-size:13.5px;color:var(--dream);line-height:1.65}
+.care-list li{margin-bottom:11px}
+.care-list b{color:var(--lunar);font-weight:500}
+.care-url{font-family:var(--type);color:var(--gold)}
+.empty{text-align:center;padding:64px 20px;color:var(--glow);font-family:var(--type);font-size:19px;letter-spacing:.03em;line-height:1.7}
+
+.phead{display:flex;gap:22px;align-items:flex-start;padding-bottom:28px;border-bottom:1px solid var(--edge)}
+.pname{font-family:var(--type);font-size:29px;font-weight:400;line-height:1.15;color:var(--lunar)}
+.pmeta{font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:var(--glow);margin-top:9px}
+.pbio{font-family:var(--type);font-size:17px;color:var(--dream);margin-top:14px;max-width:46ch;line-height:1.65}
+.sectitle{font-family:var(--type);font-size:14px;letter-spacing:.2em;text-transform:uppercase;color:var(--glow);margin:38px 0 6px}
+.footnote{margin-top:56px;padding-top:24px;border-top:1px solid var(--edge);font-size:11.5px;color:#4a4470;line-height:1.7}
+
+/* ── reactions ───────────────────────────── */
+.reacts{display:flex;gap:6px;margin-top:14px;flex-wrap:wrap}
+.react{
+  font-family:var(--sans);font-size:10px;font-weight:500;letter-spacing:.12em;
+  text-transform:uppercase;background:none;border:1px solid var(--edge);
+  color:#5c5686;border-radius:99px;padding:6px 12px;cursor:pointer;
+  transition:border-color .2s,color .2s,background .2s;
+  display:inline-flex;align-items:center;gap:7px;white-space:nowrap;
+}
+.react:hover{border-color:var(--glow);color:var(--dream)}
+.react.on{border-color:rgba(212,175,106,.45);color:var(--gold);background:rgba(212,175,106,.07)}
+.react b{font-weight:600;font-variant-numeric:tabular-nums}
+.react.readonly{cursor:default}
+.react.readonly:hover{border-color:var(--edge);color:#5c5686}
+
+/* ── patterns ────────────────────────────── */
+.pat{border:1px solid var(--edge);border-radius:3px;background:var(--deep);padding:26px}
+.pat-line{
+  font-family:var(--type);font-size:17px;line-height:1.65;color:#ded8ec;
+  padding:13px 0;border-top:1px solid var(--edge);
+}
+.pat-line:first-of-type{border-top:none;padding-top:0}
+.pat-line b{color:var(--gold);font-weight:400}
+.pat-note{font-size:12px;color:#4a4470;line-height:1.7;margin-top:18px}
+.pat-empty{font-family:var(--type);font-size:16px;color:var(--glow);line-height:1.7}
+
+/* ── visitor bar ─────────────────────────── */
+.visitor{
+  background:var(--deep);border:1px solid var(--edge);border-left:2px solid var(--dream);
+  border-radius:2px;padding:18px 22px;display:flex;align-items:center;
+  justify-content:space-between;gap:18px;flex-wrap:wrap;
+}
+.visitor p{font-size:14px;color:var(--dream);line-height:1.65;margin:0}
+.statline{
+  font-size:11.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--glow);
+  padding:14px 0 0;font-variant-numeric:tabular-nums;
+}
+.statline b{color:var(--pulse);font-weight:600}
+.readfeed{
+  display:inline-flex;align-items:center;gap:11px;align-self:flex-start;margin-top:30px;
+  font-family:var(--sans);font-size:17px;font-weight:400;letter-spacing:.01em;
+  background:none;border:none;color:var(--dream);
+  cursor:pointer;padding:0;transition:color .2s,gap .2s;
+  border-bottom:1px solid var(--edge);padding-bottom:5px;
+}
+.readfeed:hover{color:var(--pulse);gap:16px}
+.readfeed span{font-size:19px;line-height:1}
+@media(max-width:860px){.readfeed{font-size:16px}}
+
+/* ── add to home screen ──────────────────── */
+#a2hs{
+  position:fixed;left:14px;right:14px;bottom:14px;z-index:60;
+  background:var(--deep);border:1px solid var(--edge);border-radius:4px;
+  padding:15px 17px;display:none;gap:14px;align-items:flex-start;
+}
+#a2hs.show{display:flex}
+#a2hs p{font-size:13px;color:var(--dream);line-height:1.6;flex:1;margin:0}
+#a2hs b{color:var(--lunar);font-weight:500}
+#a2hs button{background:none;border:none;color:var(--glow);font-size:18px;cursor:pointer;line-height:1;padding:0 2px}
+
+/* ── profile header actions ──────────────── */
+.av-edit{position:relative;display:inline-block;cursor:pointer;border-radius:50%}
+.av-edit .cap{
+  position:absolute;inset:0;border-radius:50%;display:grid;place-items:center;
+  background:rgba(0,0,0,.62);color:var(--lunar);font-family:var(--sans);
+  font-size:9px;font-weight:600;letter-spacing:.16em;text-transform:uppercase;
+  opacity:0;transition:opacity .22s;
+}
+.av-edit:hover .cap,.av-edit:focus-within .cap{opacity:1}
+.pactions{display:flex;gap:10px;margin-top:14px;flex-wrap:wrap}
+.tiny{font-family:var(--sans);font-size:10px;font-weight:500;letter-spacing:.14em;text-transform:uppercase;background:none;border:1px solid var(--edge);color:var(--glow);border-radius:2px;padding:8px 14px;cursor:pointer;transition:border-color .22s,color .22s}
+.tiny:hover{border-color:var(--glow);color:var(--pulse)}
+.pbio.none{color:#4a4470}
+.pcontact{margin-top:12px;font-size:14px;color:var(--dream);line-height:1.6;word-break:break-word}
+.pcontact span{font-size:10px;letter-spacing:.2em;text-transform:uppercase;color:var(--glow);margin-right:9px}
+
+/* ── the key tab ─────────────────────────── */
+.kw h2{font-family:var(--type);font-size:33px;font-weight:400;line-height:1.22;margin:14px 0 20px;color:var(--lunar);text-wrap:balance}
+.kw-lead{font-size:15.5px;color:var(--dream);line-height:1.75;max-width:56ch}
+.steps{list-style:none;counter-reset:s;margin:34px 0 30px}
+.steps li{counter-increment:s;position:relative;padding:17px 0 17px 44px;border-top:1px solid var(--edge);font-family:var(--type);font-size:17px;line-height:1.6;color:#ded8ec}
+.steps li::before{content:counter(s);position:absolute;left:0;top:19px;font-family:var(--sans);font-size:10px;font-weight:600;letter-spacing:.1em;color:var(--gold);border:1px solid rgba(212,175,106,.35);border-radius:50%;width:22px;height:22px;display:grid;place-items:center}
+.enc-form{background:var(--deep);border:1px solid var(--edge);border-top:2px solid var(--gold);border-radius:3px;padding:30px;margin-top:8px}
+.enc-form h3{font-family:var(--type);font-size:23px;font-weight:400;margin-bottom:8px;color:var(--lunar)}
+.pair{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+input[type=date]{width:100%;background:var(--night);border:1px solid var(--edge);border-radius:2px;color:var(--lunar);font-family:var(--sans);font-size:15px;font-weight:300;padding:12px 15px}
+.keyin{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.1em;text-transform:uppercase}
+.logline{display:flex;justify-content:space-between;gap:14px;padding:14px 0;border-top:1px solid var(--edge);font-size:13.5px;color:var(--dream);flex-wrap:wrap}
+.logline .k{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.08em;color:var(--lunar)}
+.logline .n{color:var(--glow);font-size:12.5px;flex-basis:100%;font-family:var(--type);line-height:1.6}
+
+/* ── support ─────────────────────────────── */
+.sup{border-top:1px solid var(--edge);padding:88px 32px 104px;background:var(--night);position:relative;z-index:1}
+.sup.inapp{border-top:none;padding:0 0 40px}
+.sup-inner{max-width:640px;margin:0 auto}
+.sup h2{font-family:var(--type);font-size:34px;font-weight:400;line-height:1.22;margin:16px 0 22px;color:var(--lunar);text-wrap:balance}
+.sup-lead{font-size:15.5px;color:var(--dream);line-height:1.78;max-width:54ch}
+.sup-list{list-style:none;margin:36px 0 32px}
+.sup-list li{font-family:var(--type);font-size:16.5px;line-height:1.6;color:#ded8ec;padding:15px 0 15px 26px;position:relative;border-top:1px solid var(--edge)}
+.sup-list li::before{content:"";position:absolute;left:2px;top:24px;width:9px;height:1px;background:var(--gold)}
+.sup-cta{display:inline-block;font-family:var(--sans);font-size:11px;font-weight:600;letter-spacing:.18em;text-transform:uppercase;text-decoration:none;background:var(--dream);color:var(--night);border-radius:2px;padding:15px 28px;transition:background .25s}
+.sup-cta:hover{background:var(--pulse)}
+.sup-cta.off{background:var(--mist);color:var(--glow);cursor:not-allowed}
+.sup-small{font-size:12.5px;color:#4a4470;line-height:1.75;margin-top:26px;max-width:56ch}
+.file-in{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap;border:0}
+label.ghost{display:inline-block}
+.file-in:focus-visible + label.ghost{outline:1px solid var(--pulse);outline-offset:3px}
+.footlink{background:none;border:none;font-family:var(--sans);font-size:11.5px;color:#4a4470;cursor:pointer;padding:0;text-decoration:underline;text-underline-offset:3px;transition:color .2s}
+.footlink:hover{color:var(--dream)}
+
+/* ── mall world ──────────────────────────── */
+.mw{border-top:1px solid var(--edge);padding:92px 32px 110px;background:var(--night);position:relative;z-index:1}
+.mw-inner{max-width:720px;margin:0 auto}
+.mw h2{font-family:var(--type);font-size:38px;font-weight:400;line-height:1.2;margin:16px 0 22px;color:var(--lunar);text-wrap:balance}
+.mw-lead{font-size:16px;color:var(--dream);line-height:1.75;max-width:56ch}
+.mw-list{list-style:none;margin:40px 0 36px}
+/* mini games */
+.gcard{
+  display:flex;align-items:center;gap:22px;margin-top:26px;padding:24px 26px;
+  background:var(--deep);border:1px solid var(--edge);border-radius:3px;
+  text-decoration:none;transition:border-color .25s,background .25s;
+}
+.gcard:hover{border-color:rgba(168,155,200,.4);background:#0b0b12}
+.gcard:focus-visible{outline:1px solid var(--pulse);outline-offset:3px}
+.gart{flex:none;width:64px}
+.gart svg{width:100%;height:auto;display:block}
+.gtext{display:flex;flex-direction:column;gap:7px;min-width:0;flex:1}
+.gname{font-family:var(--type);font-size:22px;color:var(--lunar);line-height:1.2}
+.gdesc{font-size:14px;color:var(--dream);line-height:1.7;max-width:52ch}
+.gmeta{font-size:12.5px;color:var(--gold);line-height:1.6}
+.gplay{
+  flex:none;font-size:11px;font-weight:600;letter-spacing:.2em;text-transform:uppercase;
+  color:var(--night);background:var(--dream);border-radius:2px;padding:13px 22px;
+}
+.gcard:hover .gplay{background:var(--pulse)}
+.gnote{font-size:13px;color:var(--glow);line-height:1.7;margin-top:26px}
+/* A card with the game's own banner across the top instead of a small icon
+   beside the text. The art already says what the game is and how it is played,
+   so the words underneath only have to add what a picture cannot. */
+.gcard.wide{display:block;padding:0;overflow:hidden}
+.gsoon-art{display:block;width:100%;aspect-ratio:1671/941;object-fit:cover;
+  border-bottom:1px solid var(--edge)}
+.gsoon-body{display:flex;align-items:center;gap:22px;padding:22px 26px;flex-wrap:wrap}
+.gcard.wide .gtext{flex:1 1 320px}
+/* Not playable yet: a <div>, not an <a>. Nothing here is clickable, so it must
+   not look or behave like a link — no hover, no focus ring, no pointer. */
+.gcard.soon{cursor:default}
+.gcard.soon:hover{border-color:var(--edge);background:var(--deep)}
+.gsoon-tag{
+  flex:none;font-size:11px;font-weight:600;letter-spacing:.2em;text-transform:uppercase;
+  color:var(--gold);border:1px solid rgba(212,175,106,.45);border-radius:2px;padding:12px 20px;
+}
+@media (max-width:620px){
+  .gsoon-tag{width:100%;text-align:center}
+  .gcard.wide .gplay{width:100%;text-align:center}
+}
+
+/* ── common dreams ───────────────────────────────────────
+   The closed card carries a picture and a name and nothing else. Anything
+   more and the grid becomes twelve paragraphs to read before you can choose,
+   which is the opposite of a grid. */
+.dnote{font-size:12.5px;color:var(--glow);line-height:1.75;max-width:62ch;margin:0 0 26px;padding-left:14px;border-left:1px solid var(--edge)}
+.dgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:16px}
+.dcard{border:1px solid var(--edge);border-radius:3px;overflow:hidden;background:var(--deep);transition:border-color .25s}
+.dcard:hover{border-color:rgba(168,155,200,.4)}
+/* An open card takes the full width of the grid so the writing is not read
+   through a 260px straw. */
+.dcard.open{grid-column:1/-1;border-color:rgba(168,155,200,.45)}
+.dface{display:block;width:100%;padding:0;border:0;background:none;cursor:pointer;position:relative;text-align:left;color:inherit;font:inherit}
+.dface:focus-visible{outline:2px solid var(--pulse);outline-offset:-2px}
+.dimg{display:block;width:100%;height:auto;aspect-ratio:16/9;object-fit:cover;filter:saturate(.85) brightness(.9);transition:filter .3s}
+.dcard:hover .dimg,.dcard.open .dimg{filter:saturate(1) brightness(1)}
+/* Open, the card is the full width of the grid, and a 16:9 picture at that
+   width is 580px tall — the writing you opened the card for would start below
+   the fold. So the open picture is shorter, not wider. */
+.dcard.open .dimg{aspect-ratio:auto;height:clamp(170px,32vh,340px)}
+.dtitle{
+  position:absolute;left:0;right:0;bottom:0;padding:34px 16px 14px;
+  font-family:var(--type);font-size:16px;line-height:1.25;color:var(--lunar);
+  background:linear-gradient(to top,rgba(0,0,0,.92) 30%,rgba(0,0,0,0));
+  text-wrap:balance;
+}
+.dbody{padding:20px 22px 24px;border-top:1px solid var(--edge)}
+.dstat{display:flex;align-items:baseline;gap:12px;flex-wrap:wrap;margin-bottom:16px}
+.dstat b{font-family:var(--type);font-size:30px;font-weight:400;color:var(--gold);line-height:1;font-variant-numeric:tabular-nums}
+.dstat span{font-size:12.5px;color:var(--glow);line-height:1.6}
+.dbody p{font-size:14.5px;line-height:1.85;color:var(--dream);max-width:66ch;margin-bottom:14px}
+.dsrc{font-size:12px;color:var(--glow);line-height:1.7}
+.dsrc a{color:var(--dream);text-decoration:underline;text-underline-offset:3px}
+.dsrc a:hover{color:var(--pulse)}
+.dfoot{display:flex;align-items:center;gap:16px;flex-wrap:wrap;margin-top:20px;padding-top:18px;border-top:1px solid var(--edge)}
+.dbeen{
+  font-family:var(--sans);font-size:11px;font-weight:600;letter-spacing:.18em;text-transform:uppercase;
+  background:none;color:var(--dream);border:1px solid var(--edge);border-radius:2px;
+  padding:12px 20px;cursor:pointer;transition:background .2s,color .2s,border-color .2s;
+}
+.dbeen:hover{border-color:var(--glow);color:var(--lunar)}
+.dbeen.on{background:var(--dream);color:var(--night);border-color:var(--dream)}
+.dbeen.on:hover{background:var(--pulse);border-color:var(--pulse)}
+.dcount{font-size:12.5px;color:var(--glow);line-height:1.6}
+@media (max-width:520px){ .dbody{padding:18px 16px 20px} .dtitle{font-size:15px} }
+
+/* suggest a dream — the form, and what it becomes once it is sent */
+.sgst{margin-top:46px;padding:26px;border:1px solid var(--edge);border-radius:3px;background:var(--deep)}
+.sgst.sent{border-color:rgba(212,175,106,.32)}
+.sg-h{font-family:var(--type);font-size:19px;line-height:1.3;color:var(--lunar);margin-bottom:8px}
+.sgst.sent .sg-h{color:var(--gold)}
+.sg-p{font-size:13.5px;color:var(--dream);line-height:1.8;max-width:60ch;margin-bottom:16px}
+.sg-ask{color:var(--glow)}
+.sgst textarea{min-height:92px;resize:vertical;font-size:15px;line-height:1.7}
+.sg-row{display:flex;align-items:center;gap:16px;flex-wrap:wrap}
+.sg-back{
+  font-family:var(--sans);font-size:10px;font-weight:600;letter-spacing:.2em;text-transform:uppercase;
+  background:none;color:var(--glow);border:1px solid var(--edge);border-radius:2px;
+  padding:13px 20px;cursor:pointer;transition:color .2s,border-color .2s;
+}
+.sg-back:hover{color:var(--lunar);border-color:var(--glow)}
+@media (max-width:520px){ .sgst{padding:20px 16px} }
+@media (max-width:620px){
+  .gcard{flex-wrap:wrap;gap:16px}
+  .gart{width:48px}
+  .gtext{flex:1 1 60%}
+  .gplay{width:100%;text-align:center}
+}
+
+/* tonight — what everyone is dreaming about */
+.pl-head{font-family:var(--type);font-size:32px;font-weight:400;line-height:1.2;color:var(--lunar);margin:6px 0 14px}
+.pl-lead{font-size:15px;color:var(--dream);line-height:1.75;max-width:56ch;margin-bottom:34px}
+.pl-group{margin-bottom:34px}
+.pl-group h4{font-size:10px;letter-spacing:.22em;text-transform:uppercase;color:var(--glow);font-weight:500;margin-bottom:16px}
+.pl-row{display:flex;align-items:center;gap:14px;padding:9px 0}
+.pl-name{font-family:var(--type);font-size:16px;color:#ded8ec;flex:none;width:9.5em}
+.pl-bar{flex:1;height:7px;background:var(--mist);border-radius:99px;overflow:hidden}
+.pl-bar i{display:block;height:100%;background:linear-gradient(90deg,var(--glow),var(--pulse));border-radius:99px}
+.pl-n{font-size:12px;color:var(--glow);flex:none;width:3.5em;text-align:right;font-variant-numeric:tabular-nums}
+.pl-none{border-left:2px solid var(--edge);padding:6px 0 6px 24px;font-size:15px;color:var(--glow);line-height:1.78;max-width:56ch}
+.pl-foot{font-size:12.5px;color:var(--glow);line-height:1.7;margin-top:34px;padding-top:22px;border-top:1px solid var(--edge);max-width:60ch}
+/* the guide */
+.g-lead{font-size:16px;color:var(--dream);line-height:1.8;max-width:58ch;margin-bottom:16px}
+.g-h{font-family:var(--type);font-size:23px;font-weight:400;color:var(--lunar);margin:44px 0 16px;line-height:1.3}
+.g-h:first-of-type{margin-top:34px}
+.g-p{font-size:15px;color:var(--dream);line-height:1.8;max-width:58ch;margin-bottom:15px}
+.g-p b{color:#ded8ec;font-weight:500}
+.g-step{border-left:2px solid var(--edge);padding:4px 0 4px 22px;margin:0 0 26px;max-width:58ch}
+.g-step p{font-size:15px;color:var(--dream);line-height:1.78;margin-bottom:11px}
+.g-say{font-family:var(--type);font-size:16px;color:var(--gold);line-height:1.6;margin:16px 0;padding-left:22px;border-left:2px solid var(--gold);max-width:52ch}
+.g-num{font-size:10px;letter-spacing:.22em;text-transform:uppercase;color:var(--glow);font-weight:500;display:block;margin-bottom:10px}
+.g-fact{background:var(--deep);border:1px solid var(--edge);border-top:2px solid var(--gold);border-radius:3px;padding:22px 26px;margin:26px 0;max-width:58ch}
+.g-fact p{font-size:14.5px;color:var(--dream);line-height:1.75}
+.g-fact b{color:var(--lunar);font-weight:500}
+.g-warn{border-left:2px solid var(--error);padding:4px 0 4px 22px;margin:26px 0;max-width:58ch}
+.g-warn p{font-size:14.5px;color:var(--dream);line-height:1.78;margin-bottom:10px}
+.g-src{margin-top:44px;padding-top:24px;border-top:1px solid var(--edge)}
+.g-src h4{font-size:10px;letter-spacing:.22em;text-transform:uppercase;color:var(--glow);font-weight:500;margin-bottom:16px}
+.g-src li{list-style:none;font-size:13px;color:var(--glow);line-height:1.7;padding:8px 0;border-top:1px solid var(--edge)}
+.g-src li:first-child{border-top:none}
+.g-src a{color:var(--dream);text-decoration:none;border-bottom:1px solid var(--edge)}
+.g-src a:hover{color:var(--pulse);border-bottom-color:var(--glow)}
+/* Research. Borrows the guide's type scale wholesale — a second prose page
+   that looked different would just read as a different site. The only new
+   pieces are the issue date line, the inline source row under each section,
+   and the archive list, which is hidden until there is a second issue. */
+.r-meta{font-size:10px;letter-spacing:.22em;text-transform:uppercase;color:var(--glow);font-weight:500;margin:0 0 18px}
+.r-src{margin:-4px 0 6px;max-width:58ch;font-size:12.5px;color:var(--glow);line-height:1.9}
+.r-src a{color:var(--dream);text-decoration:none;border-bottom:1px solid var(--edge)}
+.r-src a:hover{color:var(--pulse);border-bottom-color:var(--glow)}
+.r-src span{color:var(--mist);margin:0 8px}
+.r-foot{margin-top:48px;padding-top:22px;border-top:1px solid var(--edge);font-size:13px;color:var(--glow);line-height:1.75;max-width:58ch;font-style:italic}
+.r-arch{margin-top:40px;padding-top:22px;border-top:1px solid var(--edge)}
+.r-arch h4{font-size:10px;letter-spacing:.22em;text-transform:uppercase;color:var(--glow);font-weight:500;margin-bottom:14px}
+.r-arch button{display:block;width:100%;text-align:left;background:none;border:none;border-top:1px solid var(--edge);color:var(--dream);font:inherit;font-size:14px;padding:12px 0;cursor:pointer}
+.r-arch button:first-of-type{border-top:none}
+.r-arch button:hover{color:var(--pulse)}
+.r-arch button.on{color:var(--lunar)}
+@media(max-width:560px){ .pl-name{width:7.5em;font-size:14.5px} }
+.mw-list li{font-family:var(--type);font-size:17px;line-height:1.6;color:#ded8ec;padding:16px 0 16px 28px;position:relative;border-top:1px solid var(--edge)}
+.mw-list li::before{content:"";position:absolute;left:2px;top:25px;width:10px;height:1px;background:var(--gold)}
+.mw-theory{border-left:2px solid var(--edge);padding:6px 0 6px 24px;margin-bottom:48px;font-size:15px;color:var(--glow);line-height:1.78;max-width:58ch}
+/* the directory board */
+.mwplan{margin:0 0 46px;border:1px solid var(--edge);border-radius:3px;overflow:hidden;background:#000}
+.mwplan img{display:block;width:100%;height:auto}
+.mwplan figcaption{font-size:12.5px;color:var(--glow);line-height:1.65;padding:14px 18px;border-top:1px solid var(--edge);background:var(--deep)}
+.mw-ask{background:var(--deep);border:1px solid var(--edge);border-top:2px solid var(--gold);border-radius:3px;padding:36px}
+.mw-ask h3{font-family:var(--type);font-size:26px;font-weight:400;margin-bottom:16px;color:var(--lunar)}
+.mw-ask p{font-size:15px;color:var(--dream);line-height:1.75;max-width:52ch;margin-bottom:18px}
+.mw-soon{display:inline-block;font-size:11px;font-weight:500;letter-spacing:.18em;text-transform:uppercase;background:var(--mist);color:var(--glow);border-radius:2px;padding:14px 26px}
+.mw-promise{font-size:13px;color:var(--glow);margin-top:20px;line-height:1.7}
+/* submission form */
+.mwform{border-top:1px solid var(--edge);margin-top:30px;padding-top:28px}
+.mwform .fld{margin-bottom:20px}
+.mwpick{display:flex;align-items:center;gap:16px;flex-wrap:wrap}
+.mwprev{width:96px;height:96px;border:1px dashed var(--edge);border-radius:3px;background:var(--night);display:flex;align-items:center;justify-content:center;overflow:hidden;flex:none}
+.mwprev img{width:100%;height:100%;object-fit:cover;display:block}
+.mwprev span{font-size:10px;letter-spacing:.16em;text-transform:uppercase;color:var(--glow);text-align:center;padding:0 8px;line-height:1.5}
+.mwnote{font-size:12.5px;color:var(--glow);line-height:1.6;margin:9px 0 0;max-width:46ch}
+.mwnote.bad{color:var(--error)}
+.mwcheck{display:flex;gap:11px;align-items:flex-start;font-size:13.5px;color:var(--dream);line-height:1.6;cursor:pointer;margin-bottom:22px}
+.mwcheck input{margin-top:3px;flex:none;accent-color:var(--dream)}
+.mwmine{border-top:1px solid var(--edge);margin-top:30px;padding-top:22px}
+.mwmine h4{font-family:var(--type);font-size:15px;font-weight:400;color:var(--dream);margin-bottom:14px}
+.mwmine li{list-style:none;font-size:13.5px;color:var(--glow);line-height:1.7;padding:9px 0;border-top:1px solid var(--edge)}
+.mwmine li:first-child{border-top:none}
+.mwmine li b{color:var(--dream);font-weight:400}
+.mw.inapp{border-top:none;padding:0 0 40px}
+
+@media(max-width:860px){
+  .wrap{grid-template-columns:1fr}
+  .hero{padding:64px 28px 40px;min-height:auto}
+  .authpanel{padding:40px 28px 70px;border-left:none;border-top:1px solid var(--edge)}
+  .authinner{max-width:none}
+  .hero h1{font-size:30px}
+  .hero .wordmark{margin-bottom:24px}
+  .moon{display:none}
+}
+@media(max-width:560px){
+  .shell{padding:0 18px 100px}
+  .mw{padding:64px 20px 80px}
+  .mw h2{font-size:27px}
+  .pname{font-size:25px}
+  .post-body{font-size:17px}
+}
+</style>
+</head>
+<body>
+
+<div id="offline"><b>Lucid is unreachable right now.</b> The server that holds the dreams is not answering. Nothing you have written is lost — try again in a few minutes.</div>
+<div id="stars"></div>
+<div id="aura"></div>
+<div id="app"><div class="wrap"><div class="hero">
+  <div class="wordmark">Lucid<span class="d">.</span></div>
+  <h1>Enter the<br><span class="em">dreaming</span><br>mind.</h1>
+  <p>Write it down before it goes. The symbols, the feelings, the fragments that stay
+     with you after waking, kept somewhere they will not dissolve by lunchtime.</p>
+  <div class="badge"><span class="dot"></span>Early access</div>
+</div><div class="authpanel"><div class="authinner">
+  <noscript><p class="hint">Lucid needs JavaScript to sign you in. Turn it on and reload.</p></noscript>
+</div></div></div>
+<section class="mw"><div class="mw-inner">
+  <div class="eyebrow">The shared dream</div>
+  <h2>Thousands of people keep waking up in the same mall.</h2>
+  <p class="mw-lead">Since late 2025 they have been finding each other online and comparing
+    notes. Nobody describes identical interiors. What matches is the architecture, and the
+    feeling. If you have been there, draw it.</p>
+</div></section></div>
+<div id="counter" aria-live="polite"></div>
+<div id="a2hs"><p><b>Keep Lucid on your home screen.</b> Tap Share, then Add to Home Screen. It opens straight to the box you write in.</p><button id="a2hsX" aria-label="Dismiss">&times;</button></div>
+
+<script>
+(function(){
+'use strict';
+
+var API = 'https://sentinel.tailb152cd.ts.net';
+var MAX_POST = 600, MAX_BIO = 160, MAX_CONTACT = 80;
+
+// Paste the Ko-fi link here once the account exists. Empty = button reads "opening soon".
+var DONATE_URL = 'https://ko-fi.com/lucidatnight';
+
+var me = null;            // signed-in user, or null
+var view = 'landing';     // landing | feed | mall | key | games | profile | settings | donate
+
+/* Something outside the site can ask for the Support page by name —
+   lucidatnight.com/#support — which is how the end of the sheep game gets
+   here. The hash is read once and then wiped from the address bar, so a
+   reload or a shared link does not keep dragging people back to the ask. */
+var wantSupport = false;
+try {
+  if (/^#(support|donate)$/i.test(location.hash)) {
+    wantSupport = true;
+    view = 'donate';
+    if (history.replaceState) history.replaceState(null, '', location.pathname);
+  }
+} catch (e) {}
+var viewing = null;       // handle being looked at
+var flash = null;         // {t:'err'|'ok', m:string}
+var cache = { posts: [], profile: null, encounters: null, submissions: null, pulse: null, sheep: null, wake: null };
+// Held outside the DOM so a re-render does not lose a picked drawing.
+var mwDrawing = null;
+// What is typed in the feed's search box, and whether it should keep focus
+// through the re-render that typing causes.
+var query = '', searchFocus = false;
+
+/* The composer.
+ *
+ * Most people arriving here are reading, not writing, and a box demanding
+ * "What did you see?" above every visit is a question asked of somebody who
+ * came to listen. So it starts as one line and opens when it is wanted.
+ *
+ * composerDraft exists because the feed re-renders on every keystroke in the
+ * search box. Without somewhere to keep it, half a dream would disappear the
+ * moment somebody searched for a word to check they were not repeating
+ * themselves. It survives closing the box too — the collapsed line says so,
+ * so nobody has to wonder whether their words are still there.
+ */
+var composerOpen = false, composerDraft = '', composerFocus = false;
+
+/* Every word has to appear somewhere in the dream, or in who wrote it.
+   This filters what is displayed. It does not touch the database, and it
+   does not ask the server for anything — the posts are already here. */
+function matching(posts, qq){
+  qq = String(qq || '').trim().toLowerCase();
+  if (!qq) return posts;
+  var words = qq.split(/\s+/).filter(Boolean);
+  return posts.filter(function(p){
+    var hay = (String(p.body || '') + ' ' + String(p.handle || '')).toLowerCase();
+    return words.every(function(w){ return hay.indexOf(w) !== -1; });
+  });
+}
+
+/* Mark the matched words. The matching runs on the raw text and each piece is
+   escaped afterwards — escaping first would let a search for "amp" land inside
+   an &amp; and tear the markup open. */
+function highlight(text, qq){
+  text = String(text || '');
+  qq = String(qq || '').trim();
+  if (!qq) return esc(text);
+  var words = qq.split(/\s+/).filter(Boolean)
+    .map(function(w){ return w.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); });
+  if (!words.length) return esc(text);
+  var re;
+  try { re = new RegExp('(' + words.join('|') + ')', 'gi'); } catch(e){ return esc(text); }
+  var out = '', last = 0, m;
+  while ((m = re.exec(text)) !== null){
+    if (m.index === re.lastIndex) { re.lastIndex++; continue; }
+    out += esc(text.slice(last, m.index)) + '<mark>' + esc(m[0]) + '</mark>';
+    last = m.index + m[0].length;
+  }
+  return out + esc(text.slice(last));
+}
+var authTab = 'signup';
+var pendingKey = null;    // shown once after signup
+var pendingUser = null;   // held back until the key is acknowledged
+var pendingAsk = null;    // the blind question, shown before the key screen
+
+/* ── api ─────────────────────────────────── */
+// The site and the API live on different domains, and Safari blocks
+// cross-site cookies outright. So the session travels as a bearer token
+// instead, which no browser interferes with.
+function token(){ try { return localStorage.getItem('lucid_token'); } catch(e){ return null; } }
+function setToken(t){
+  try { t ? localStorage.setItem('lucid_token', t) : localStorage.removeItem('lucid_token'); } catch(e){}
+}
+
+function api(path, opts){
+  opts = opts || {};
+  var headers = {};
+  if (opts.body) headers['Content-Type'] = 'application/json';
+  var t = token();
+  if (t) headers['Authorization'] = 'Bearer ' + t;
+  return fetch(API + path, {
+    method: opts.method || 'GET',
+    credentials: 'include',
+    headers: headers,
+    body: opts.body ? JSON.stringify(opts.body) : undefined
+  }).then(function(r){
+    offline(false);
+    return r.json().catch(function(){ return {}; }).then(function(data){
+      if (r.status === 401 && token()){
+        // The token is dead. Do not leave a signed-out person looking at a
+        // signed-in page — that was the whole confusion.
+        setToken(null); me = null;
+        if (path !== '/api/me') { render(); }
+      }
+      if (!r.ok) throw new Error(data.error || 'Something went wrong.');
+      return data;
+    });
+  }).catch(function(err){
+    // A TypeError from fetch means the request never reached the server.
+    if (err instanceof TypeError){ offline(true); throw new Error('offline'); }
+    throw err;
+  });
+}
+function offline(on){
+  var el = document.getElementById('offline');
+  if (el) el.classList.toggle('show', !!on);
+}
+
+/* ── helpers ─────────────────────────────── */
+function esc(s){
+  return String(s == null ? '' : s).replace(/[&<>"']/g, function(c){
+    return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];
+  });
+}
+function when(ts){
+  var d = Math.floor((Date.now() - ts)/1000);
+  if (d < 60) return 'just now';
+  if (d < 3600) return Math.floor(d/60) + 'm ago';
+  if (d < 86400) return Math.floor(d/3600) + 'h ago';
+  if (d < 604800) return Math.floor(d/86400) + 'd ago';
+  return new Date(ts).toLocaleDateString(undefined,{month:'short',day:'numeric'});
+}
+function joined(ts){ return new Date(ts).toLocaleDateString(undefined,{month:'long',year:'numeric'}); }
+function avatar(handle, url, size){
+  var cls = 'av ' + size;
+  if (url) return '<div class="'+cls+'"><img src="'+esc(url)+'" alt=""></div>';
+  return '<div class="'+cls+'" aria-hidden="true">'+esc(String(handle||'?').charAt(0).toUpperCase())+'</div>';
+}
+var REACTS = [
+  ['same',   'Same',       'I have had this dream'],
+  ['place',  'That place', 'I know where that is'],
+  ['chills', 'Chills',     'That got me']
+];
+function reactBar(p){
+  var mine = p.mine || [], counts = p.reactions || {};
+  var h = '<div class="reacts">';
+  REACTS.forEach(function(r){
+    var n = counts[r[0]] || 0, on = mine.indexOf(r[0]) !== -1;
+    h += '<button class="react' + (on ? ' on' : '') + (me ? '' : ' readonly')
+      + '" data-react="' + p.id + ':' + r[0] + '" title="' + esc(r[2]) + '">'
+      + esc(r[1]) + (n ? ' <b>' + n + '</b>' : '') + '</button>';
+  });
+  return h + '</div>';
+}
+function flashHTML(){
+  if (!flash) return '';
+  var h = '<div class="msg '+flash.t+'">'+esc(flash.m)+'</div>';
+  return h;
+}
+function moonSVG(){
+  return '<svg viewBox="0 0 80 80" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M60 40C60 51.046 51.046 60 40 60C28.954 60 20 51.046 20 40C20 28.954 28.954 20 40 20C31.163 20 24 27.163 24 36C24 44.837 31.163 52 40 52C48.837 52 56 44.837 56 36C56 34.626 55.824 33.294 55.493 32.023C57.997 34.206 60 36.938 60 40Z" fill="#e8e4f0"/></svg>';
+}
+
+/* ── mall world (shared by both states) ──── */
+/* How to lucid dream. Every number on this page comes from a published study,
+   and the sources are listed at the bottom so anyone can check them. Where the
+   evidence is thin it says so — a page that overpromises would be the fastest
+   way to lose the trust the rest of the site runs on. */
+function guideView(){
+  return flashHTML()
+    + '<div class="pl-head">How to lucid dream.</div>'
+
+    + '<p class="g-lead">A lucid dream is one you know you are having while it is happening. '
+    + 'It is not rare and it is not a gift. Across 34 studies and 24,282 people, '
+    + '<b style="color:#ded8ec;font-weight:500">55% of people report at least one lucid dream in their life</b>, '
+    + 'and 23% have one a month or more.</p>'
+
+    + '<p class="g-lead">What follows is what has actually been tested. None of it works '
+    + 'every night, for anyone.</p>'
+
+    + '<div class="g-fact"><p>Set your expectations here first. In the largest trial of these '
+    + 'techniques, 355 people practising nightly had a lucid dream on about '
+    + '<b>16% of nights in their second week</b> — up from 5% in their first. '
+    + 'That is the real number. Most nights, nothing happens. The people who get '
+    + 'there are the ones who kept going anyway.</p></div>'
+
+    + '<div class="g-h">Start by remembering more</div>'
+    + '<p class="g-p">You cannot become lucid in a dream you will not remember. '
+    + 'In that same study, <b>how well someone recalled their dreams was one of the '
+    + 'strongest predictors of whether they succeeded</b>.</p>'
+    + '<p class="g-p">So this is the first step and the one nobody skips successfully: '
+    + 'write down what you remember, the moment you wake, before you move or check '
+    + 'your phone. A fragment counts. One room, one face. Recall improves with '
+    + 'practice, quickly, and everything else here depends on it.</p>'
+    + '<p class="g-p">That is what the feed on this site is for.</p>'
+
+    + '<div class="g-h">Reality checks</div>'
+    + '<p class="g-p">Through the day, stop and genuinely ask whether you are dreaming — '
+    + 'then test it. Look at your hands. Read a line of text, look away, read it again. '
+    + 'Pinch your nose shut and try to breathe in. In a dream, text tends not to hold '
+    + 'still and the breath often comes anyway.</p>'
+    + '<p class="g-p">The point is not the gesture, it is the habit of questioning, which '
+    + 'eventually happens inside a dream too. <b>Be aware that reality checks on their own '
+    + 'did not work</b> in the trials — they only helped as part of the routine below. '
+    + 'Do them, but do not stop there.</p>'
+
+    + '<div class="g-h">The two that worked</div>'
+    + '<p class="g-p">Two techniques came out roughly equal in the international study: '
+    + 'MILD at 16.5% and SSILD at 16.9%. A hybrid of the two was no better. '
+    + 'Pick one, do it for a fortnight.</p>'
+
+    + '<div class="g-step"><span class="g-num">MILD — with wake back to bed</span>'
+    + '<p>Sleep about five hours. Set an alarm. Get up, stay up for a few minutes, '
+    + 'long enough to be properly awake.</p>'
+    + '<p>Going back to bed, repeat to yourself, meaning it:</p>'
+    + '<div class="g-say">The next time I am dreaming, I will remember that I am dreaming.</div>'
+    + '<p>Then picture yourself back in a dream you had recently — and picture yourself '
+    + 'noticing, inside it, that it is a dream.</p>'
+    + '<p><b>Then fall asleep fast.</b> This part is not folklore. People who got back to '
+    + 'sleep within ten minutes of finishing had lucid dreams <b>64.9% more often</b>, '
+    + 'and in an earlier study those who dropped off within five minutes succeeded on '
+    + 'nearly 46% of attempts. If you lie there awake, the effect fades.</p></div>'
+
+    + '<div class="g-step"><span class="g-num">SSILD — the other one</span>'
+    + '<p>Same wake-back-to-bed start. Then cycle your attention slowly through three '
+    + 'senses, four or five times over: what you can see behind closed eyes, what you '
+    + 'can hear, what you can feel. Do it loosely. Then let yourself fall asleep.</p>'
+    + '<p>It performed as well as MILD. If the repeating and visualising of MILD keeps '
+    + 'you too alert to fall back asleep, this is the one to try.</p></div>'
+
+    + '<div class="g-h">When you get there</div>'
+    + '<p class="g-p">Most first lucid dreams end within seconds, usually because the '
+    + 'realisation is exciting enough to wake you. Stay calm and keep your attention on '
+    + 'the dream rather than on the fact of being in one.</p>'
+    + '<p class="g-p">Dreamers commonly report that rubbing your hands together, touching '
+    + 'a surface, or looking closely at something nearby keeps a dream from fading. '
+    + '<b>These are practitioner reports rather than trial results</b> — worth trying, '
+    + 'but they do not have the evidence behind them that the induction techniques above do, '
+    + 'and this page is not going to pretend otherwise.</p>'
+
+    + '<div class="g-h">What can go wrong</div>'
+    + '<p class="g-p">A study of people describing their own experiences found real '
+    + 'downsides, and you should know them before you start.</p>'
+    + '<div class="g-warn">'
+    + '<p><b style="color:#ded8ec;font-weight:500">Sleep paralysis</b> was the most '
+    + 'commonly reported problem — waking unable to move, often with a sense of a presence '
+    + 'in the room. It is frightening and it is harmless, and it passes. Many people said '
+    + 'the fear faded once they understood what it was.</p>'
+    + '<p><b style="color:#ded8ec;font-weight:500">Broken sleep.</b> Wake back to bed means '
+    + 'deliberately interrupting your night. People reported waking tired. If you are '
+    + 'already short on sleep, do not run these techniques nightly.</p>'
+    + '<p><b style="color:#ded8ec;font-weight:500">False awakenings</b> — dreaming that you '
+    + 'woke up, sometimes several times over. Disorienting, not dangerous.</p>'
+    + '<p><b style="color:#ded8ec;font-weight:500">Bad lucid dreams.</b> Being aware in a '
+    + 'dream does not guarantee control of it. Some people report knowing they were '
+    + 'dreaming and being unable to change what was happening.</p>'
+    + '<p>That same study found no evidence of dissociative symptoms. If you have a sleep '
+    + 'disorder, or anything that affects sleep, talk to a doctor before deliberately '
+    + 'fragmenting your nights.</p>'
+    + '</div>'
+
+    + '<div class="g-h">The short version</div>'
+    + '<p class="g-p">Write your dreams down every morning. After a fortnight of that, add '
+    + 'wake back to bed with MILD a couple of nights a week. Expect most nights to be '
+    + 'nothing. Keep the journal either way — it is the part that compounds.</p>'
+
+    + '<div class="g-src"><h4>Where these numbers come from</h4><ul>'
+    + '<li>Saunders, Roe, Smith &amp; Clegg (2016). <a href="https://www.sciencedirect.com/science/article/abs/pii/S1053810016301283" target="_blank" rel="noopener noreferrer">Lucid dreaming incidence: a quality effects meta-analysis of 50 years of research</a>. <i>Consciousness and Cognition</i>. — the 55% and 23% figures, from 34 studies and 24,282 people.</li>'
+    + '<li>Aspy, Delfabbro, Proeve &amp; Mohr (2017). <a href="https://www.sciencedaily.com/releases/2017/10/171019100812.htm" target="_blank" rel="noopener noreferrer">Reality testing and the mnemonic induction of lucid dreams</a>. <i>Dreaming</i>. — the combined technique result, and the 46% figure for falling asleep within five minutes.</li>'
+    + '<li>Aspy (2020). <a href="https://www.frontiersin.org/journals/psychology/articles/10.3389/fpsyg.2020.01746/full" target="_blank" rel="noopener noreferrer">Findings from the International Lucid Dream Induction Study</a>. <i>Frontiers in Psychology</i>. — 355 participants; MILD 16.5%, SSILD 16.9%; dream recall as a predictor; the ten-minute finding.</li>'
+    + '<li>Schredl, Dyck &amp; Kühnel (2022). <a href="https://academic.oup.com/sleepadvances/article/3/1/zpac027/6693839" target="_blank" rel="noopener noreferrer">Benefits and concerns of seeking and experiencing lucid dreams</a>. <i>SLEEP Advances</i>. — sleep paralysis, broken sleep, false awakenings, and the absence of dissociative symptoms.</li>'
+    + '</ul>'
+    + '<p class="pl-foot" style="border:none;padding:0;margin-top:20px">Nothing here is medical '
+    + 'advice. It is a summary of published research with the sources attached so you can '
+    + 'go and read them yourself.</p></div>';
+}
+
+/* What everyone is dreaming about. The one page here that no other site could
+   publish, because no other site has these dreams. Counts only — nothing
+   anybody wrote is quoted, and the server refuses to answer at all until
+   there are enough dreams from enough people that a count is not a finger
+   pointing at one person. */
+function pulseView(){
+  var h = flashHTML();
+  var d = cache.pulse;
+
+  h += '<div class="pl-head">Tonight.</div>';
+
+  if (!d){
+    h += '<p class="pl-lead">Counting…</p>';
+    return h;
+  }
+
+  var w = d.window || {};
+
+  if (!w.enough){
+    h += '<p class="pl-lead">What everyone here is dreaming about, counted from the words '
+      + 'people actually wrote.</p>'
+      + '<div class="pl-none">Not enough dreams yet to say anything true. '
+      + 'This page opens at <b>' + (w.needPosts || 8) + ' dreams</b> from at least '
+      + '<b>' + (w.needAuthors || 3) + ' people</b> — so far there are ' + (w.total || 0)
+      + ' from ' + (w.authors || 0) + '. Below that, a count is not a pattern, '
+      + 'it is a way of pointing at whoever wrote it.</div>'
+      + '<p class="pl-foot">Nothing on this page will ever name anyone or quote a dream. '
+      + 'It only ever counts.</p>';
+    return h;
+  }
+
+  h += '<p class="pl-lead">' + w.total + ' dreams written here in the last ' + d.days
+    + ' days, by ' + w.authors + ' people who have never met. '
+    + 'This is what they keep coming back to.</p>';
+
+  function group(title, rows){
+    if (!rows || !rows.length) return '';
+    var top = rows[0].n || 1;
+    return '<div class="pl-group"><h4>' + title + '</h4>'
+      + rows.map(function(r){
+          return '<div class="pl-row"><span class="pl-name">' + esc(r.label) + '</span>'
+            + '<span class="pl-bar"><i style="width:' + Math.round(r.n / top * 100) + '%"></i></span>'
+            + '<span class="pl-n">' + r.n + '</span></div>';
+        }).join('')
+      + '</div>';
+  }
+
+  h += group('Places', w.places) + group('People', w.people) + group('What happens', w.themes);
+
+  if (w.mall)  h += '<div class="pl-none" style="margin-bottom:18px"><b>' + w.mall + '</b> of those '
+    + (w.mall === 1 ? 'dream mentions' : 'dreams mention') + ' a mall.</div>';
+  if (w.lucid) h += '<div class="pl-none"><b>' + w.lucid + '</b> '
+    + (w.lucid === 1 ? 'describes' : 'describe') + ' knowing it was a dream while it was happening.</div>';
+
+  h += '<p class="pl-foot">Counted by matching words against a fixed list. '
+    + 'It is arithmetic, not interpretation, and it says nothing about what any '
+    + 'of it means. No dream is quoted here and nobody is named — a word only '
+    + 'appears once it has turned up in at least two different dreams.</p>';
+  return h;
+}
+
+function mallWorld(inApp){
+  return '<section class="mw'+(inApp?' inapp':'')+'" id="mallworld"><div class="mw-inner">'
+    + '<div class="eyebrow">The shared dream</div>'
+    + '<h2>Thousands of people keep waking up in the same mall.</h2>'
+    + '<p class="mw-lead">Since late 2025 they have been finding each other online and comparing notes. '
+    + 'Nobody describes identical interiors. What matches is the architecture, and the feeling.</p>'
+    + '<ul class="mw-list">'
+    + '<li>A food court, almost always at the center of it.</li>'
+    + '<li>Escalators that run too long. Sometimes stacked into staircases with no top.</li>'
+    + '<li>Empty, or far too crowded. Rarely anything in between.</li>'
+    + '<li>Corridors that keep going, into offices, apartments, once in a while a fairground.</li>'
+    + '<li>Confusion without threat. Nothing chases you. You just cannot leave.</li>'
+    + '</ul>'
+    + '<p class="mw-theory">The ordinary explanation is probably the right one. Malls are among the most '
+    + 'standardised buildings we have ever put up, near identical in layout anywhere on earth, and almost '
+    + 'everyone carries a memory of being small and briefly lost inside one. Run a shared spatial memory '
+    + 'through enough sleeping brains and you get matching dreams with nothing stranger going on than that.</p>'
+    // The directory board. A placeholder for now — every unit on it is blank
+    // because nothing has been confirmed yet, which is the honest state and
+    // also the argument for sending a drawing.
+    + '<figure class="mwplan">'
+    + '<img src="mallworld-map.jpg" alt="A blank mall directory floor plan. '
+    + 'A circular food court at the centre, wings of unlabelled units running off it, '
+    + 'escalators, and corridors that leave the edge of the plan. Across it, the words '
+    // Not lazy-loaded. The plan is injected by a re-render rather than being in
+    // the page at load, and Chrome then never schedules a lazy image — it sat
+    // blank with the request never made. It is 160 KB and it is the point of
+    // this tab, so it loads eagerly.
+    + 'Mall World, Coming Soon." width="1800" height="1005">'
+    + '<figcaption>Every space on this plan is empty because nothing has been confirmed yet. '
+    + 'Units get named as enough drawings agree on what is in them.</figcaption>'
+    + '</figure>'
+    + '<div class="mw-ask"><h3>So draw it.</h3>'
+    + '<p>If enough drawings agree on the same detail, the same fountain, the same dead escalator, the same '
+    + 'corridor behind the food court, that detail goes on the map. Not as proof the place exists. Because '
+    + 'agreement between strangers who have never spoken is worth looking at closely.</p>'
+    + '<p>Pencil on paper is fine. A photo of it on your phone is fine. Accuracy is not the point. The parts '
+    + 'you are certain about are the point.</p>'
+    + mwSubmit()
+    + '<p class="mw-promise">Nothing you send is published anywhere without asking you first.</p>'
+    + '</div></div></section>';
+}
+
+/* The upload form. An account is required, so a drawing can always be traced
+ * back to a person who can be asked about it. Signed out, this is an invitation
+ * rather than a wall. */
+function mwSubmit(){
+  if (!me){
+    return '<div class="mwform">'
+      + '<p style="margin-bottom:18px">Sending a drawing needs an account, so that if your drawing '
+      + 'matches someone else\'s there is a way to come back and ask you about it.</p>'
+      + '<button class="btn" data-v="landing">Make an account</button></div>';
+  }
+  var subs = cache.submissions;
+  var mine = '';
+  if (subs && subs.length){
+    mine = '<div class="mwmine"><h4>' + (subs.length === 1 ? 'Your drawing' : 'Your ' + subs.length + ' drawings') + '</h4><ul>'
+      + subs.map(function(s){
+          return '<li><b>' + new Date(s.created_at).toLocaleDateString(undefined,{month:'short',day:'numeric',year:'numeric'})
+            + '</b> &nbsp;' + esc(String(s.description).slice(0,110))
+            + (String(s.description).length > 110 ? '…' : '') + '</li>';
+        }).join('')
+      + '</ul></div>';
+  }
+  return '<div class="mwform">'
+    + flashHTML()
+    + '<div class="fld"><span class="fl">Your drawing</span>'
+    + '<div class="mwpick">'
+    // Painted from mwDrawing, not from the DOM, so a re-render never loses it.
+    + '<div class="mwprev" id="mwPrev">' + (mwDrawing
+        ? '<img src="' + mwDrawing + '" alt="">' : '<span>No file yet</span>') + '</div>'
+    + '<div><input type="file" id="mwFile" class="file-in" accept="image/*,.heic,.heif">'
+    + '<label class="ghost" for="mwFile">Choose a photo</label>'
+    + '<p class="mwnote" id="mwNote">A phone photo of paper is fine. It is shrunk in your browser before it '
+    + 'is sent, which also strips the location tag off the photo.</p></div></div></div>'
+    + '<div class="fld"><label class="fl" for="mwDesc">What do you remember</label>'
+    + '<textarea id="mwDesc" rows="4" maxlength="1000" placeholder="Where in the mall this is, what was around it, what you were doing there."></textarea></div>'
+    + '<div class="fld"><label class="fl" for="mwPlace">Where in the mall (optional)</label>'
+    + '<input type="text" id="mwPlace" maxlength="200" placeholder="Second floor, past the food court"></div>'
+    + '<label class="mwcheck"><input type="checkbox" id="mwShare">'
+    + '<span>You may show this drawing on the map, credited to ' + esc(me.handle) + '. '
+    + 'Leave it unticked and only I will ever see it.</span></label>'
+    + '<button class="btn" id="mwSend">Send drawing</button>'
+    + mine + '</div>';
+}
+
+/* The headline counts the people who are actually here. Until the API answers
+   it says the same sentence without the number — never a nought, and never a
+   gap where a number should be. loadStats fills it in when the count lands,
+   because the landing page is drawn before that request comes back. */
+function supportHead(){
+  var n = stats && typeof stats.dreamers === 'number' ? stats.dreamers : null;
+  return n && n > 1
+    ? n.toLocaleString() + ' people are writing their dreams down here.'
+    : 'People are writing their dreams down here.';
+}
+
+function support(inApp){
+  var open = !!DONATE_URL;
+  return '<section class="sup' + (inApp?' inapp':'') + '" id="support"><div class="sup-inner">'
+    + '<div class="eyebrow">Support</div>'
+    + '<h2>' + esc(supportHead()) + '</h2>'
+    + '<p class="sup-lead">Lucid opened a few weeks ago with nobody on it. It is free, it is not going behind '
+    + 'a paywall, and it will never carry advertising — your dreams are not for sale, and that is a decision '
+    + 'rather than a stage it is going through. Keeping it that way costs something. Here is exactly what.</p>'
+    + '<ul class="sup-list">'
+    + '<li>The server, and backups, so that nothing anybody writes here can be lost.</li>'
+    + '<li>A proper domain, so the address belongs to Lucid.</li>'
+    + '<li>Mall World. Collecting the drawings, comparing the accounts, building the map.</li>'
+    + '<li>Room to grow, so it stays quick as more people arrive.</li>'
+    + '</ul>'
+    + (open
+        ? '<a class="sup-cta" href="' + esc(DONATE_URL) + '" target="_blank" rel="noopener noreferrer">Give something</a>'
+        : '<span class="sup-cta off">Opening soon</span>')
+    + '<p class="sup-small">Nothing here is behind a paywall and nothing will be. If you would rather not, or '
+    + 'cannot, post a dream instead. That is worth more to this place than money is.<br><br>'
+    + 'Lucid is a personal project, not a charity. Donations are not tax deductible.</p>'
+    + '</div></section>';
+}
+
+/* ── signed-out landing ──────────────────── */
+function landing(){
+  var h = '<div class="wrap"><div class="hero">'
+    + '<div class="wordmark">Lucid<span class="d">.</span></div>'
+    + '<h1>Enter the<br><span class="em">dreaming</span><br>mind.</h1>'
+    + '<p>Write it down before it goes. The symbols, the feelings, the fragments that stay with you after '
+    + 'waking, kept somewhere they will not dissolve by lunchtime.</p>'
+    + '<div class="badge"><span class="dot"></span>Early access</div>'
+    + '<button class="readfeed" data-v="feed">Read what people are dreaming <span>&rarr;</span></button>'
+    + '<div class="moon">' + moonSVG() + '</div>'
+    + '</div><div class="authpanel"><div class="authinner">';
+
+  if (pendingAsk){
+    // Asked before the key screen, and long before the feed, because the only
+    // thing that makes this answer worth having is that it was given before
+    // they had read anything at all. Every second of delay costs something.
+    h += '<div class="stack">'
+      + '<div><div class="eyebrow">One question, before you go in</div>'
+      + '<h2 class="ask-q">' + esc(pendingAsk.text) + '</h2></div>'
+      + '<textarea id="askIn" maxlength="1200" placeholder="" spellcheck="true"></textarea>'
+      + '<p class="hint">' + esc(pendingAsk.hint) + '</p>'
+      + '<button class="btn wide" id="askSend">Send it</button>'
+      + '<button class="ghost wide" id="askSkip">I have not been there</button>'
+      + '<p class="hint">Nobody else sees this, and there is no right answer. '
+      + 'It is asked now, before you have read anything here, because an answer '
+      + 'given afterwards would tell us nothing.</p></div>';
+  } else if (pendingKey){
+    h += '<div class="stack">'
+      + '<div><div class="eyebrow">Account created</div>'
+      + '<h2 style="font-family:var(--type);font-size:27px;font-weight:400;margin-top:12px">Your key.</h2></div>'
+      + '<div class="keybox"><span class="private">&#9679; Private to you</span>'
+      + '<div class="keyval">' + esc(pendingKey) + '</div>'
+      + '<p class="hint">Written down once. Save it somewhere safe.</p></div>'
+      + '<button class="btn wide" id="keyGo">Enter Lucid</button></div>';
+  } else {
+    h += '<div class="tabs">'
+      + '<button class="tab' + (authTab==='signup'?' on':'') + '" data-tab="signup">Create account</button>'
+      + '<button class="tab' + (authTab==='signin'?' on':'') + '" data-tab="signin">Sign in</button></div>'
+      + flashHTML()
+      + '<form class="form' + (authTab==='signup'?' on':'') + '" id="signupForm" autocomplete="on"><div class="stack">'
+      + '<div><label class="fl" for="suHandle">Dreamer name</label>'
+      + '<input type="text" id="suHandle" placeholder="nightwalker" autocomplete="username" maxlength="20">'
+      + '<p class="hint" style="margin-top:8px">Letters, numbers and underscores. This is what appears on your dreams.</p></div>'
+      + '<div><label class="fl" for="suEmail">Email</label>'
+      + '<input type="email" id="suEmail" placeholder="your@email.com" autocomplete="email"></div>'
+      + '<div><label class="fl" for="suPassword">Password</label>'
+      + '<input type="password" id="suPassword" placeholder="at least 8 characters" autocomplete="new-password"></div>'
+      + '<button type="submit" class="btn wide" id="suBtn">Begin dreaming</button>'
+      + '</div></form>'
+      + '<form class="form' + (authTab==='signin'?' on':'') + '" id="signinForm" autocomplete="on"><div class="stack">'
+      + '<div><label class="fl" for="siEmail">Email</label>'
+      + '<input type="email" id="siEmail" placeholder="your@email.com" autocomplete="email"></div>'
+      + '<div><label class="fl" for="siPassword">Password</label>'
+      + '<input type="password" id="siPassword" placeholder="your password" autocomplete="current-password"></div>'
+      + '<button type="submit" class="btn wide" id="siBtn">Enter</button>'
+      + '</div></form>';
+  }
+
+  h += '</div></div></div>' + mallWorld(false) + support(false);
+  return h;
+}
+
+/* ── reporting, and looking after people ───
+   Both of these live outside render(). They are built straight onto the page
+   and take themselves off again, so opening one cannot throw away a dream
+   somebody is halfway through typing. */
+
+// Held apart from the report copy because it is shown in two situations that
+// have nothing to do with each other: somebody worried about a stranger, and
+// somebody who has just written something about themselves.
+function careHTML(lead){
+  return '<div class="care">'
+    + '<p class="care-lead">' + lead + '</p>'
+    + '<ul class="care-list">'
+    + '<li><b>In the United States</b> — call or text <b>988</b>, any time, and you will reach '
+    + 'the Suicide and Crisis Lifeline.</li>'
+    + '<li><b>Anywhere else</b> — <span class="care-url">findahelpline.com</span> lists services by country.</li>'
+    + '<li><b>If someone is in immediate danger</b>, your local emergency number is the fastest route.</li>'
+    + '</ul></div>';
+}
+
+function closeSheet(){
+  var s = document.getElementById('sheet');
+  if (s) s.remove();
+  document.removeEventListener('keydown', sheetKey);
+}
+function sheetKey(e){ if (e.key === 'Escape') closeSheet(); }
+
+function openSheet(inner){
+  closeSheet();
+  var el = document.createElement('div');
+  el.id = 'sheet';
+  el.className = 'sheet';
+  el.innerHTML = '<div class="sheet-box" role="dialog" aria-modal="true">' + inner + '</div>';
+  el.addEventListener('click', function(e){ if (e.target === el) closeSheet(); });
+  document.body.appendChild(el);
+  document.addEventListener('keydown', sheetKey);
+  return el;
+}
+
+function showCare(){
+  var el = openSheet(
+    '<h3>Before you go.</h3>'
+    + careHTML('What you wrote reads like it might be about you rather than about a dream. '
+             + 'Nobody has been told and nothing has been flagged — this is only on your screen.')
+    + '<p class="sheet-small">If that is wrong, ignore it. It is a guess made by a machine '
+    + 'reading words, and it gets people wrong.</p>'
+    + '<div class="sheet-row"><button class="btn" id="careOk">Close</button></div>'
+  );
+  el.querySelector('#careOk').onclick = closeSheet;
+}
+
+var REPORT_REASONS = [
+  ['abuse',   'Abusive or hateful'],
+  ['spam',    'Spam or advertising'],
+  ['sexual',  'Sexual content'],
+  ['worried', 'I am worried about this person'],
+  ['other',   'Something else']
+];
+
+function openReport(postId){
+  var el = openSheet(
+    '<h3>Report this dream.</h3>'
+    + '<p class="sheet-small">This goes to whoever looks after Lucid. Nothing happens to the '
+    + 'post automatically, and the person who wrote it is not told who reported it.</p>'
+    + '<div class="reasons">' + REPORT_REASONS.map(function(r, i){
+        return '<label class="reason"><input type="radio" name="rr" value="' + r[0] + '"'
+             + (i === 0 ? ' checked' : '') + '><span>' + r[1] + '</span></label>';
+      }).join('') + '</div>'
+    + '<textarea id="repNote" maxlength="300" placeholder="Anything worth knowing (optional)"></textarea>'
+    + '<div class="sheet-row"><button class="ghost" id="repCancel">Cancel</button>'
+    + '<button class="btn" id="repSend">Send report</button></div>'
+    + '<p class="sheet-err" id="repErr"></p>'
+  );
+
+  el.querySelector('#repCancel').onclick = closeSheet;
+  el.querySelector('#repSend').onclick = function(){
+    var btn = el.querySelector('#repSend');
+    var picked = el.querySelector('input[name="rr"]:checked');
+    var reason = picked ? picked.value : 'other';
+    var note = el.querySelector('#repNote').value;
+    btn.disabled = true; btn.textContent = 'Sending';
+
+    api('/api/posts/' + postId + '/report', { method:'POST', body:{ reason:reason, note:note }})
+      .then(function(d){
+        var box = el.querySelector('.sheet-box');
+        box.innerHTML = '<h3>Thank you.</h3>'
+          + '<p class="sheet-small">It has been passed on. You will not hear back about it, '
+          + 'which is deliberate — reports are not a conversation between you and the person '
+          + 'you reported.</p>'
+          + (d && d.care
+              ? careHTML('You said you were worried about them. In case it helps you, or them:')
+              : '')
+          + '<div class="sheet-row"><button class="btn" id="repDone">Close</button></div>';
+        box.querySelector('#repDone').onclick = closeSheet;
+      })
+      .catch(function(err){
+        btn.disabled = false; btn.textContent = 'Send report';
+        el.querySelector('#repErr').textContent = err.message === 'offline'
+          ? 'That did not send. Try again in a moment.' : err.message;
+      });
+  };
+}
+
+/* ── mini games ───────────────────────────
+   Somewhere to put the things that are not the journal. A game does not belong
+   in the middle of a feed of other people's dreams, and the reason for having
+   one at all is the hour it is aimed at: awake at three, not wanting to read.
+
+   Each game is its own page rather than a view in here. They are canvas games
+   with their own loop; folding one into this file would mean it kept running,
+   or kept having to be torn down, every time somebody opened their profile. */
+function sheepBest(){
+  // Shared with the game: same site, same browser, same key.
+  try { return Math.max(0, Number(localStorage.getItem('lucid_sheep_best')) || 0); } catch(e){ return 0; }
+}
+function wakeBest(){
+  try { return Math.max(0, Number(localStorage.getItem('lucid_wake_best')) || 0); } catch(e){ return 0; }
+}
+
+/* The line under a game's name on its card.
+
+   Both games have the same four things to say — your best, who leads, whether
+   anybody has beaten you, whether anybody has played at all — so they say them
+   in the same words. What differs is the unit and what an empty board sounds
+   like, and those are the two arguments. Written out twice, the second one
+   drifts from the first the next time either is edited. */
+function gameLine(b, own, unit, empty){
+  var mine = Math.max(own, (b && b.you && b.you.best) || 0);
+  var lead = b && b.top && b.top.length ? b.top[0] : null;
+  function n(v){ return v.toLocaleString() + unit; }
+  if (mine && lead && lead.best > mine) return 'Your best is ' + n(mine) + '. ' + esc(lead.handle) + ' leads with ' + n(lead.best) + '.';
+  if (mine && lead)                     return 'Your best is ' + n(mine) + ', and nobody has beaten it.';
+  if (mine)                             return 'Your best is ' + n(mine) + '.';
+  if (lead)                             return esc(lead.handle) + ' leads with ' + n(lead.best) + '.';
+  if (b)                                return empty;
+  return '';
+}
+
+__DREAMS_DATA__
+
+
+__RESEARCH_DATA__
+
+
+
+/* Which issue of Research is open. Index into ISSUES, so 0 is always the
+   newest and a fresh issue opens by default the moment it is added. */
+var openIssue = 0;
+
+function researchView(){
+  var iss = ISSUES[openIssue] || ISSUES[0];
+  if (!iss) return flashHTML() + '<div class="pl-head">Research.</div>'
+    + '<p class="g-lead">Nothing published yet.</p>';
+
+  var h = flashHTML()
+    + '<div class="pl-head">Research.</div>'
+    + '<p class="r-meta">Issue ' + (iss.n < 10 ? '0' : '') + iss.n + ' &middot; ' + esc(iss.month) + '</p>'
+    + '<p class="g-lead">' + iss.lead + '</p>'
+    + '<p class="g-lead" style="color:var(--glow)">No interpretation. No symbols, no meanings. '
+    + 'Just the work.</p>';
+
+  // The blocks carry author-written markup on purpose, so they go in as they
+  // are. Nothing from the database is ever rendered through here.
+  for (var i = 0; i < iss.blocks.length; i++){
+    var b = iss.blocks[i];
+    if (b.k === 'h')         h += '<div class="g-h">' + b.t + '</div>';
+    else if (b.k === 'p')    h += '<p class="g-p">' + b.t + '</p>';
+    else if (b.k === 'fact') h += '<div class="g-fact"><p>' + b.t + '</p></div>';
+    else if (b.k === 'src'){
+      var bits = [];
+      for (var j = 0; j < b.links.length; j++){
+        bits.push('<a href="' + b.links[j].url + '" target="_blank" rel="noopener noreferrer">'
+                  + b.links[j].label + '</a>');
+      }
+      h += '<p class="r-src">&rarr; ' + bits.join('<span>&middot;</span>') + '</p>';
+    }
+  }
+
+  if (iss.footer) h += '<p class="r-foot">' + iss.footer + '</p>';
+
+  // Hidden entirely while there is one issue — an "archive" of a single item
+  // just tells people the thing they are reading is the only thing there is.
+  if (ISSUES.length > 1){
+    h += '<div class="r-arch"><h4>Earlier issues</h4>';
+    for (var k = 0; k < ISSUES.length; k++){
+      h += '<button data-iss="' + k + '" class="' + (k === openIssue ? 'on' : '') + '">'
+         + 'Issue ' + (ISSUES[k].n < 10 ? '0' : '') + ISSUES[k].n + ' &middot; '
+         + esc(ISSUES[k].month) + '</button>';
+    }
+    h += '</div>';
+  }
+
+  return h;
+}
+
+
+/* Which card is open, or null. One at a time: two open cards in a grid push
+   each other around the page and you lose your place in whichever you were
+   reading. */
+var openDream = null;
+
+function dreamsView(){
+  var counts = (cache.dreams && cache.dreams.counts) || {};
+  var mine   = (cache.dreams && cache.dreams.mine) || [];
+
+  var h = flashHTML()
+    + '<div class="pl-head">The dreams almost everyone has.</div>'
+    + '<p class="g-lead">Twelve of them, and what is actually known about each &mdash; '
+    + 'which for several is nothing at all. Tap one to open it.</p>'
+    + '<p class="dnote">Nearly every percentage here comes from one questionnaire, which asks '
+    + 'whether you have <em>ever</em> had the dream. That is a lifetime count, not how often it '
+    + 'happens. Where there is no research, the card says so rather than guessing.</p>'
+    + '<div class="dgrid">';
+
+  for (var i = 0; i < DREAMS.length; i++){
+    var d = DREAMS[i];
+    var open = openDream === d.id;
+    var n = counts[d.id] || 0;
+    var on = mine.indexOf(d.id) > -1;
+
+    h += '<article class="dcard' + (open ? ' open' : '') + '">'
+      + '<button class="dface" data-dream="' + d.id + '" aria-expanded="' + (open ? 'true' : 'false')
+      +   '" aria-controls="db-' + d.id + '">'
+      +   '<img class="dimg" src="img/' + d.img + '.jpg" alt="' + esc(d.alt) + '" loading="lazy">'
+      +   '<span class="dtitle">' + esc(d.title) + '</span>'
+      + '</button>';
+
+    if (open){
+      h += '<div class="dbody" id="db-' + d.id + '">'
+        +   '<div class="dstat"><b>' + esc(d.stat) + '</b><span>' + esc(d.statNote) + '</span></div>';
+      for (var j = 0; j < d.body.length; j++) h += '<p>' + esc(d.body[j]) + '</p>';
+      h += '<p class="dsrc">Source: <a href="' + esc(d.source.url) + '" target="_blank" rel="noopener noreferrer">'
+        +   esc(d.source.label) + '</a></p>'
+        +   '<div class="dfoot">'
+        +     '<button class="dbeen' + (on ? ' on' : '') + '" data-been="' + d.id + '">'
+        +       (on ? "I\u2019ve been there" : "I\u2019ve been there") + '</button>'
+        +     '<span class="dcount">' + dreamCount(n, on) + '</span>'
+        +   '</div>'
+        + '</div>';
+    }
+    h += '</article>';
+  }
+
+  h += '</div>' + suggestHTML();
+  return h;
+}
+
+/* Suggesting a dream for the page.
+ *
+ * Two states in one box. Before sending it is a form; after sending it is a
+ * thank you that asks for a donation, because the moment somebody has just
+ * given you something for nothing is the only moment asking does not feel
+ * like begging. Nothing is asked for up front.
+ */
+var suggestSent = false, suggestDraft = '', suggestFrom = '';
+
+function suggestHTML(){
+  if (suggestSent){
+    return '<div class="sgst sent">'
+      + '<div class="sg-h">Thank you &mdash; that went straight to me.</div>'
+      + '<p class="sg-p">I read all of these myself. If it belongs on the page, it goes on the page.</p>'
+      + '<p class="sg-p sg-ask">Like Lucid? It is free and it is staying free. It runs on a machine '
+      + 'I pay for, out of my own pocket.</p>'
+      + '<div class="sg-row">'
+      +   '<a class="btn" href="' + DONATE_URL + '" target="_blank" rel="noopener noreferrer">Donate</a>'
+      +   '<button class="sg-back" id="sgBack">Back to Lucid</button>'
+      + '</div></div>';
+  }
+  return '<div class="sgst">'
+    + '<div class="sg-h">A dream that should be here and is not?</div>'
+    + '<p class="sg-p">Tell me which one. Twelve is where this started, not where it ends.</p>'
+    + '<label class="fl" for="sgBody">The dream</label>'
+    + '<textarea id="sgBody" maxlength="700" placeholder="What happens in it, and why you think a lot of people have it.">'
+    + esc(suggestDraft) + '</textarea>'
+    + '<label class="fl" for="sgFrom" style="margin-top:16px">Email, if you want an answer</label>'
+    + '<input type="text" id="sgFrom" maxlength="120" autocomplete="email" value="' + esc(suggestFrom) + '" placeholder="Optional. Only I see it.">'
+    + '<div class="sg-row" style="margin-top:18px">'
+    +   '<button class="btn" id="sgSend" disabled>Send</button>'
+    +   '<span class="count" id="sgCount"></span>'
+    + '</div></div>';
+}
+
+/* The tally, in words. "1 person" reads as a bug next to "84 people". */
+function dreamCount(n, mine){
+  if (!n) return mine ? 'You are the first here.' : 'Nobody here has said so yet.';
+  if (n === 1) return mine ? 'Just you, so far.' : 'One person here has too.';
+  return n.toLocaleString() + ' people here have too.';
+}
+
+function gamesView(){
+  var line  = gameLine(cache.sheep, sheepBest(), '', 'Nobody has counted a sheep yet.');
+  var wline = gameLine(cache.wake,  wakeBest(), ' feet', 'Nobody has hit one yet.');
+
+  return flashHTML()
+    + '<div class="pl-head">Can\'t sleep?</div>'
+    + '<p class="g-lead">Try some of our mini games.</p>'
+
+    + '<a class="gcard wide" href="sheep.html">'
+    +   '<img class="gsoon-art" src="img/sheep.jpg" alt="A child in bed watches sheep leap '
+    +     'across a moonlit sky full of floating islands.">'
+    +   '<span class="gsoon-body">'
+    +     '<span class="gtext">'
+    +       '<span class="gname">Counting Sheep</span>'
+    +       '<span class="gdesc">They come over the fence one at a time and you count them as they '
+    +         'go. Some of them are wolves wearing fleece. Miss one, or count a wolf, and you lose '
+    +         'a little of your attention — three lapses and the night is over.</span>'
+    +       (line ? '<span class="gmeta">' + line + '</span>' : '')
+    +     '</span>'
+    +     '<span class="gplay">Play</span>'
+    +   '</span>'
+    + '</a>'
+
+    /* Wake Up! — live now, so it is a link with a Play on it like the other
+       one. It was a plain div while there was nowhere for it to go: a card
+       that looks clickable and isn't is worse than one that says it is not
+       ready. */
+    + '<a class="gcard wide" href="wake.html">'
+    +   '<img class="gsoon-art" src="img/wakeup.jpg" alt="A boy in pyjamas swings a baseball '
+    +     'bat at his alarm clock, launching it out over a sky full of floating islands.">'
+    +   '<span class="gsoon-body">'
+    +     '<span class="gtext">'
+    +       '<span class="gname">Wake Up!</span>'
+    +       '<span class="gdesc">Tap as fast as you can for three seconds. Your alarm clock '
+    +         'gets hit with a baseball bat and flies out of the bedroom, and every cloud it '
+    +         'clips throws it further. Go further than last time.</span>'
+    +       (wline ? '<span class="gmeta">' + wline + '</span>' : '')
+    +     '</span>'
+    +     '<span class="gplay">Play</span>'
+    +   '</span>'
+    + '</a>'
+
+    + '<p class="gnote">More to come. If you have an idea for one, put it on the feed.</p>';
+}
+
+/* ── signed-in app ───────────────────────── */
+function topbar(){
+  var h = '<div class="topbar"><div class="wordmark">Lucid<span class="d">.</span></div><nav class="nav">'
+    + '<button data-v="feed" class="' + (view==='feed'?'on':'') + '">Feed</button>';
+  if (me) h += '<button data-v="key" class="' + (view==='key'?'on':'') + '">Your Key</button>';
+  h += '<button data-v="pulse" class="' + (view==='pulse'?'on':'') + '">Tonight</button>';
+  h += '<button data-v="guide" class="' + (view==='guide'?'on':'') + '">How To</button>';
+  h += '<button data-v="dreams" class="' + (view==='dreams'?'on':'') + '">Common Dreams</button>';
+  h += '<button data-v="mall" class="' + (view==='mall'?'on':'') + '">Mall World</button>';
+  h += '<button data-v="research" class="' + (view==='research'?'on':'') + '">Research</button>';
+  h += '<button data-v="games" class="' + (view==='games'?'on':'') + '">Mini Games</button>';
+  h += me
+    ? '<button data-v="profile" class="' + (view==='profile'&&!viewing?'on':'') + '">' + esc(me.handle) + '</button>'
+      + '<button id="topSignout" title="Sign out" aria-label="Sign out">Sign out</button>'
+    : '<button data-v="landing" class="on">Sign in</button>';
+  return h + '</nav></div>';
+}
+
+function feedView(){
+  var h = flashHTML();
+
+  if (!me){
+    h += '<div class="visitor"><p>You are reading. To write a dream of your own, '
+      + 'or to answer someone else\'s, you need a name here.</p>'
+      + '<button class="btn" data-v="landing">Join</button></div>';
+  } else {
+    if (!composerOpen){
+      var held = composerDraft.trim().length;
+      h += '<button class="writebar' + (held ? ' has' : '') + '" id="openComposer">'
+        + '<span class="wb-q">' + (held ? 'Your dream is still here, unposted.' : 'What did you see?') + '</span>'
+        + '<span class="wb-go">' + (held ? 'Finish it' : 'Write') + '</span></button>';
+    } else {
+      h += '<div class="card composer"><label class="fl" for="composer">What did you see?</label>'
+        + '<textarea id="composer" maxlength="' + MAX_POST + '" placeholder="A room. A face. The thing you could not explain.">'
+        + esc(composerDraft) + '</textarea>'
+        + '<div class="spread" style="margin-top:16px"><span class="count" id="count">0 / ' + MAX_POST + '</span>'
+        + '<span class="crow"><button class="cclose" id="closeComposer">Not now</button>'
+        + '<button class="btn" id="postBtn" disabled>Post dream</button></span></div>'
+        + '<p class="hint" style="margin-top:14px">A fragment is enough. One room, one face, one feeling. '
+        + 'Most of what survives waking up is not a story.</p></div>';
+    }
+  }
+
+  h += '<div class="statline" id="feedstat"></div>';
+
+  // Search the words people actually wrote. Nothing is filtered out of the
+  // database and nothing is deleted — this hides rows from the page, and
+  // emptying the box brings them all back.
+  h += '<div class="srch"><span class="mag">⌕</span>'
+    + '<input type="text" id="srch" placeholder="Search dreams — a place, a person, a word" '
+    + 'value="' + esc(query) + '" autocomplete="off" spellcheck="false">'
+    + (query ? '<button class="clr" id="srchClr">Clear</button>' : '') + '</div>';
+
+  var shown = matching(cache.posts, query);
+
+  if (query){
+    h += '<p class="srchnote">' + (shown.length
+      ? shown.length + (shown.length === 1 ? ' dream mentions ' : ' dreams mention ') + '&ldquo;' + esc(query) + '&rdquo;.'
+      : 'No dream mentions &ldquo;' + esc(query) + '&rdquo;. Nothing has been removed — clear the box to see them all again.')
+      + '</p>';
+  }
+
+  if (!cache.posts.length){
+    h += '<div class="empty">No dreams yet.<br>' + (me ? 'The first one is yours.' : 'Come back soon.') + '</div>';
+  } else if (!shown.length){
+    h += '';   // the note above already said it; an empty-state block would repeat it
+  } else {
+    h += '<div class="feed">';
+    shown.forEach(function(p){
+      var own = me && p.handle === me.handle;
+      h += '<article class="post' + (own?' mine':'') + '">' + avatar(p.handle, p.avatar, 's')
+        + '<div><div class="post-head">'
+        + '<button class="handle" data-go="' + esc(p.handle) + '">' + esc(p.handle) + '</button>'
+        + '<span class="when">' + esc(when(p.created_at)) + '</span>'
+        + (own ? '<button class="del" data-del="' + p.id + '">delete</button>' : '')
+        + (!own && me ? '<button class="rep" data-rep="' + p.id + '" title="Report this dream">report</button>' : '')
+        + '</div><div class="post-body">' + highlight(p.body, query) + '</div>'
+        + reactBar(p) + '</div></article>';
+    });
+    h += '</div>';
+  }
+  h += '<p class="footnote">Dreams are kept on a machine that belongs to Lucid, not to anyone else. No comments, by design.</p>';
+  return h;
+}
+
+function profileView(){
+  var d = cache.profile;
+  if (!d) return '<div class="empty">Loading&hellip;</div>';
+  var u = d.user, own = !!(me && u.handle === me.handle);
+
+  // Your own picture is the picker. Everyone else's is just a picture.
+  var pic = own
+    ? '<input type="file" id="avFile" class="file-in" accept="image/*,.heic,.heif">'
+      + '<label class="av-edit" for="avFile" title="Change your picture">'
+      + avatar(u.handle, u.avatar, 'l') + '<span class="cap">Change</span></label>'
+    : avatar(u.handle, u.avatar, 'l');
+
+  var h = flashHTML()
+    + '<div class="phead">' + pic + '<div style="flex:1;min-width:0">'
+    + '<div class="pname">' + esc(u.handle) + '</div>'
+    + '<div class="pmeta">Dreaming since ' + esc(joined(u.joined)) + ' &middot; '
+    + d.postCount + (d.postCount === 1 ? ' dream' : ' dreams') + '</div>'
+    + (u.bio ? '<div class="pbio">' + esc(u.bio) + '</div>'
+             : (own ? '<div class="pbio none">No bio yet.</div>' : ''))
+    // Deliberately not a clickable link. Anyone can type anything here, and a
+    // site that turns strangers' text into links is a site that ships people
+    // somewhere they did not choose to go.
+    + (u.contact ? '<div class="pcontact"><span>Find them at</span> ' + esc(u.contact) + '</div>' : '')
+    + (own ? '<div class="pactions"><button class="tiny" data-v="settings">Settings</button>'
+             + '<span class="hint" id="avName">Click your picture to change it</span></div>' : '')
+    + '</div></div>';
+
+  if (own){
+    h += '<div class="sectitle">Your Lucid key</div><div class="keybox">'
+      + '<span class="private">&#9679; Only you can see this</span>'
+      + '<div class="keyval blur" id="keyv">' + esc(me.lucidKey || '') + '</div>'
+      + '<div class="row"><button class="ghost" id="keyReveal">Reveal</button>'
+      + '<button class="ghost" id="keyCopy">Copy</button></div>'
+      + '<p class="hint" style="margin-top:14px">Nobody else can see this, including from a public '
+      + 'profile page. The server only ever sends it to you.</p></div>';
+
+    // Patterns are yours alone. Nobody visiting your profile sees them.
+    h += patternsBlock(d.patterns);
+  }
+
+  h += '<div class="sectitle">' + (own ? 'Your dreams' : 'Dreams') + '</div>';
+  if (!d.posts.length){
+    h += '<div class="empty" style="padding:44px 20px;font-size:17px">Nothing posted yet.</div>';
+  } else {
+    h += '<div class="feed">';
+    d.posts.forEach(function(x){
+      h += '<article class="post' + (own?' mine':'') + '">' + avatar(u.handle, u.avatar, 's')
+        + '<div><div class="post-head"><span class="when">' + esc(when(x.created_at)) + '</span>'
+        + (own ? '<button class="del" data-del="' + x.id + '">delete</button>' : '')
+        + '</div><div class="post-body">' + esc(x.body) + '</div>'
+        + reactBar(x) + '</div></article>';
+    });
+    h += '</div>';
+  }
+  return h;
+}
+
+function keyView(){
+  var h = flashHTML()
+    + '<div class="kw"><div class="eyebrow">The key</div>'
+    + '<h2>If you meet someone in there.</h2>'
+    + '<p class="kw-lead">Your Lucid key exists for one reason. If you become lucid inside a dream and you '
+    + 'find another person who is also lucid, who also knows they are dreaming, tell them your key and ask '
+    + 'for theirs. Then both of you come here when you wake up and write down what you were given.</p>'
+
+    + '<ol class="steps">'
+    + '<li>Become lucid. Realise you are dreaming while it is still happening.</li>'
+    + '<li>Find someone else who is lucid. They will know. That is the whole test.</li>'
+    + '<li>Trade keys. Say yours out loud, hear theirs, hold onto it as you wake.</li>'
+    + '<li>Write it down here, immediately, before the memory thins out.</li>'
+    + '</ol>'
+
+    + '<div class="keybox" style="margin-bottom:30px"><span class="private">&#9679; Only you can see this</span>'
+    + '<div class="keyval blur" id="keyv">' + esc(me.lucidKey || '') + '</div>'
+    + '<div class="row"><button class="ghost" id="keyReveal">Reveal</button>'
+    + '<button class="ghost" id="keyCopy">Copy</button></div>'
+    + '<p class="hint" style="margin-top:14px">This is yours to give away inside a dream and nowhere else. '
+    + 'It never appears on your public profile and no other reader can pull it from this page.</p></div>'
+
+    + '<div class="enc-form"><h3>Log an encounter.</h3>'
+    + '<p class="hint" style="margin-bottom:24px">Nothing is confirmed back to you. If the other person writes '
+    + 'the same thing from their side, that pairing is recorded. If they never do, your entry simply sits here.</p>'
+    + '<div class="stack">'
+    + '<div class="pair">'
+    + '<div><label class="fl" for="encMine">Your key</label>'
+    + '<input type="text" id="encMine" class="keyin" placeholder="LUC-XXXXXX" maxlength="10" autocomplete="off"></div>'
+    + '<div><label class="fl" for="encTheirs">Their key</label>'
+    + '<input type="text" id="encTheirs" class="keyin" placeholder="LUC-XXXXXX" maxlength="10" autocomplete="off"></div>'
+    + '</div>'
+    + '<div><label class="fl" for="encDate">Night of</label>'
+    + '<input type="date" id="encDate">'
+    + '<p class="hint" style="margin-top:8px">Optional, and worth getting right. Two people naming each other on '
+    + 'the same night is a much stronger signal than two people naming each other at all.</p></div>'
+    + '<div><label class="fl" for="encNote">What do you remember?</label>'
+    + '<textarea id="encNote" maxlength="300" style="min-height:76px" placeholder="Where you were. What they looked like. What was said."></textarea></div>'
+    + '<div><button class="btn" id="encBtn">Record it</button></div>'
+    + '</div></div>';
+
+  h += '<div class="sectitle">Encounters you have logged</div>';
+  if (!cache.encounters){
+    h += '<div class="empty" style="padding:40px 20px;font-size:16px">Loading&hellip;</div>';
+  } else if (!cache.encounters.length){
+    h += '<div class="empty" style="padding:44px 20px;font-size:17px">Nothing yet.<br>Most people never get this far.</div>';
+  } else {
+    cache.encounters.forEach(function(e){
+      h += '<div class="logline"><span class="k">' + esc(e.other_key) + '</span>'
+        + '<span class="when">' + esc(e.dream_date || when(e.created_at)) + '</span>'
+        + (e.note ? '<span class="n">' + esc(e.note) + '</span>' : '') + '</div>';
+    });
+  }
+  h += '</div>';
+  return h;
+}
+
+function patternsBlock(pt, total){
+  if (!pt) return '';
+  var h = '<div class="sectitle">Patterns</div>';
+  if (!pt.enough){
+    return h + '<div class="pat"><p class="pat-empty">Three dreams and this starts working. '
+      + 'You have ' + (pt.total || 0) + '.</p></div>';
+  }
+  var lines = [];
+  var list = function(arr){
+    return arr.map(function(x){ return '<b>' + esc(x.label) + '</b> (' + x.n + ')'; }).join(', ');
+  };
+  if (pt.places.length) lines.push('Keeps turning up: ' + list(pt.places) + '.');
+  if (pt.people.length) lines.push('Who is there: ' + list(pt.people) + '.');
+  if (pt.themes.length) lines.push('What happens: ' + list(pt.themes) + '.');
+  if (pt.mall >= 2) lines.push('The mall appears in <b>' + pt.mall + '</b> of your ' + pt.total + ' dreams.');
+  if (pt.lucid >= 1) lines.push('You knew you were dreaming <b>' + pt.lucid + (pt.lucid === 1 ? '</b> time.' : '</b> times.'));
+  if (pt.smallHours >= 2) lines.push('<b>' + pt.smallHours + '</b> of these were written down between two and seven in the morning.');
+  lines.push('<b>' + pt.total + '</b> dreams over <b>' + pt.days + '</b> days.');
+
+  if (lines.length <= 1){
+    return h + '<div class="pat"><p class="pat-empty">Nothing repeats yet. Keep writing and it will.</p></div>';
+  }
+  return h + '<div class="pat">'
+    + lines.map(function(l){ return '<div class="pat-line">' + l + '</div>'; }).join('')
+    + '<p class="pat-note">Counted from the words you wrote, nothing more. This is arithmetic, not '
+    + 'interpretation \u2014 it can tell you a house came up nine times, and nothing at all about why.</p></div>';
+}
+
+function settingsView(){
+  return flashHTML()
+    + '<div class="eyebrow">Settings</div>'
+    + '<h2 style="font-family:var(--type);font-size:31px;font-weight:400;margin:14px 0 26px;color:var(--lunar)">Your account.</h2>'
+
+    + '<div class="sectitle" style="margin-top:0">Bio</div>'
+    + '<div class="card"><div class="stack">'
+    + '<div><textarea id="bioIn" maxlength="' + MAX_BIO + '" style="min-height:88px" placeholder="A sentence about how you dream.">' + esc(me.bio || '') + '</textarea>'
+    + '<p class="hint" style="margin-top:9px">Up to ' + MAX_BIO + ' characters. Shown on your profile to anyone who visits it.</p></div>'
+    + '<div><button class="btn" id="saveProfile">Save bio</button></div>'
+    + '</div></div>'
+
+    + '<div class="sectitle">How people can reach you</div>'
+    + '<div class="card"><div class="stack">'
+    + '<div><input type="text" id="contactIn" maxlength="' + MAX_CONTACT + '" '
+    + 'placeholder="@yourname on Instagram" value="' + esc(me.contact || '') + '">'
+    + '<p class="hint" style="margin-top:9px">Optional, and blank unless you fill it in. '
+    + 'If two of you keep ending up in the same place, this is how you find each other. '
+    + '<b style="color:var(--dream);font-weight:400">Anyone who visits your profile can read it</b>, '
+    + 'so put something you are happy for strangers to see — a social handle rather than '
+    + 'a phone number. Lucid shows it as plain text and never as a link.</p></div>'
+    + '<div><button class="btn" id="saveContact">Save</button>'
+    + (me.contact ? ' <button class="ghost" id="clearContact">Remove</button>' : '') + '</div>'
+    + '</div></div>'
+
+    + '<div class="sectitle">Picture</div>'
+    + '<div class="card"><div class="row">'
+    + '<input type="file" id="avFile" class="file-in" accept="image/*,.heic,.heif">'
+    + '<label class="ghost" for="avFile">Choose picture</label>'
+    + (me.avatar ? '<button class="ghost" id="avClear">Remove</button>' : '')
+    + '<span class="hint" id="avName">Saved as soon as you pick it. Cropped square and shrunk to 128px on your device first.</span>'
+    + '</div></div>'
+
+    + '<div class="sectitle">Account</div>'
+    + '<div class="card"><div class="stack">'
+    + '<div class="hint">Signed in as <b style="color:var(--lunar);font-weight:500">' + esc(me.handle) + '</b>'
+    + (me.email ? ' &middot; ' + esc(me.email) : '') + '</div>'
+    + '<div><button class="ghost" id="signout">Sign out</button></div>'
+    + '</div></div>';
+}
+
+/* ── render ──────────────────────────────── */
+function render(){
+  var app = document.getElementById('app');
+  // Signed out, the landing page is the front door — but the feed, Mall World
+  // and profiles are all readable without an account.
+  if (!me && view === 'landing'){
+    app.innerHTML = landing();
+  } else {
+    if (!me && (view === 'key' || view === 'settings')) view = 'feed';
+    var body = view === 'profile' ? profileView()
+      : view === 'key' ? keyView()
+      : view === 'pulse' ? pulseView()
+      : view === 'guide' ? guideView()
+      : view === 'mall' ? mallWorld(true)
+      : view === 'games' ? gamesView()
+      : view === 'dreams' ? dreamsView()
+      : view === 'research' ? researchView()
+      : view === 'donate' ? support(true)
+      : view === 'settings' ? settingsView() : feedView();
+    app.innerHTML = '<div class="shell">' + topbar() + body
+      + (view === 'donate' ? ''
+         : '<p class="footnote" style="margin-top:44px"><button class="footlink" data-v="donate">Support Lucid</button></p>')
+      + '</div>';
+  }
+  flash = null;
+  wire();
+}
+
+function wire(){
+  var $ = function(id){ return document.getElementById(id); };
+
+  Array.prototype.forEach.call(document.querySelectorAll('[data-tab]'), function(b){
+    b.onclick = function(){ authTab = b.getAttribute('data-tab'); render(); };
+  });
+
+  var sf = $('signupForm');
+  if (sf) sf.onsubmit = function(e){
+    e.preventDefault();
+    var btn = $('suBtn'); btn.disabled = true; btn.textContent = 'Creating';
+    api('/api/signup', { method:'POST', body:{
+      handle: $('suHandle').value.trim().toLowerCase(),
+      email: $('suEmail').value.trim(),
+      password: $('suPassword').value
+    }}).then(function(d){
+      // Hold the user back so the key screen (part of the signed-out view) can show.
+      setToken(d.token);
+      pendingUser = d.user; pendingKey = d.user.lucidKey;
+      render(); loadStats();
+      // Then ask the question, if the server has one. Fetched rather than
+      // hard-coded here so the wording can change on the server without
+      // waiting for everybody's browser to pick up a new page.
+      api('/api/blind')
+        .then(function(b){
+          if (b && b.question && !b.answered){ pendingAsk = b.question; render(); }
+        })
+        .catch(function(){ /* no question, no problem — carry on to the key */ });
+    }).catch(function(err){
+      flash = { t:'err', m: err.message === 'offline'
+        ? 'Cannot reach Lucid right now. Try again shortly.' : err.message };
+      me = null; render();
+    });
+  };
+
+  var nf = $('signinForm');
+  if (nf) nf.onsubmit = function(e){
+    e.preventDefault();
+    var btn = $('siBtn'); btn.disabled = true; btn.textContent = 'Entering';
+    api('/api/signin', { method:'POST', body:{
+      email: $('siEmail').value.trim(), password: $('siPassword').value
+    }}).then(function(d){ setToken(d.token); me = d.user; view = 'feed'; loadFeed(); })
+      .catch(function(err){
+        flash = { t:'err', m: err.message === 'offline'
+          ? 'Cannot reach Lucid right now. Try again shortly.' : err.message };
+        authTab = 'signin'; render();
+      });
+  };
+
+  var askSend = $('askSend'), askSkip = $('askSkip');
+  if (askSend) askSend.onclick = function(){
+    var text = ($('askIn').value || '').trim();
+    if (!text) { pendingAsk = null; render(); return; }
+    askSend.disabled = true; askSend.textContent = 'Sending';
+    // Either way the person moves on. A failed send must not strand somebody
+    // on a question they never asked to be shown.
+    api('/api/blind', { method:'POST', body:{ answer: text }})
+      .catch(function(){})
+      .then(function(){ pendingAsk = null; render(); });
+  };
+  if (askSkip) askSkip.onclick = function(){ pendingAsk = null; render(); };
+
+  var kg = $('keyGo');
+  if (kg) kg.onclick = function(){
+    me = pendingUser; pendingUser = null; pendingKey = null; view = 'feed'; loadFeed();
+  };
+
+  // Switching issues on the Research page. Scrolls to the top, because
+  // landing halfway down a different article is disorienting.
+  Array.prototype.forEach.call(document.querySelectorAll('[data-iss]'), function(b){
+    b.onclick = function(){
+      openIssue = Number(b.getAttribute('data-iss')) || 0;
+      render();
+      window.scrollTo(0,0);
+    };
+  });
+
+  Array.prototype.forEach.call(document.querySelectorAll('[data-v]'), function(b){
+    b.onclick = function(){
+      var v = b.getAttribute('data-v');
+      viewing = null;
+      if (v === 'landing'){ view = 'landing'; render(); window.scrollTo(0,0); return; }
+      if (v === 'feed'){ window.scrollTo(0,0); return loadFeed(); }
+      if (v === 'profile') return openProfile(me.handle);
+      if (v === 'feed') return loadFeed();
+      if (v === 'key') return loadEncounters();
+      if (v === 'settings'){ view = 'settings'; render(); window.scrollTo(0,0); return; }
+      if (v === 'mall'){ view = 'mall'; render(); window.scrollTo(0,0); loadSubmissions(); return; }
+      if (v === 'pulse'){ view = 'pulse'; render(); window.scrollTo(0,0); loadPulse(); return; }
+      if (v === 'games'){ view = 'games'; render(); window.scrollTo(0,0); loadSheep(); loadWake(); return; }
+      if (v === 'dreams'){ view = 'dreams'; openDream = null; render(); window.scrollTo(0,0); loadDreams(); return; }
+      view = v; render();
+    };
+  });
+  // opening and closing a card
+  Array.prototype.forEach.call(document.querySelectorAll('[data-dream]'), function(b){
+    b.onclick = function(){
+      var id = b.getAttribute('data-dream');
+      openDream = (openDream === id) ? null : id;
+      render();
+      // Bring the card back under the thumb. Opening one lower down the grid
+      // otherwise pushes it off the screen and looks like nothing happened.
+      if (openDream){
+        var el = document.querySelector('[data-dream="' + openDream + '"]');
+        if (el && el.scrollIntoView) el.scrollIntoView({ block: 'start', behavior: 'smooth' });
+      }
+    };
+  });
+
+  // I have been there
+  Array.prototype.forEach.call(document.querySelectorAll('[data-been]'), function(b){
+    b.onclick = function(){
+      if (!me){ flash = { t:'err', m:'You need a name here to say that.' }; render(); return; }
+      var id = b.getAttribute('data-been');
+      var on = !b.classList.contains('on');
+      // Turn it over straight away. The server is confirming, not deciding,
+      // and a button that waits on a round trip feels broken.
+      b.classList.toggle('on', on);
+      api('/api/dreams/' + encodeURIComponent(id), { method:'POST', body:{ on: on } })
+        .then(function(d){
+          if (!d || !d.counts) return;
+          cache.dreams = cache.dreams || { counts:{}, mine:[] };
+          cache.dreams.counts = d.counts;
+          var at = cache.dreams.mine.indexOf(id);
+          if (on && at < 0) cache.dreams.mine.push(id);
+          if (!on && at > -1) cache.dreams.mine.splice(at, 1);
+          render();
+        })
+        // Put the button back, and say so. Silently reverting is how a broken
+        // server looks exactly like a broken button — which is precisely what
+        // happened the first time this shipped.
+        .catch(function(err){
+          b.classList.toggle('on', !on);
+          flash = { t:'err', m: err && err.message === 'offline'
+            ? 'That did not save — you are offline.'
+            : 'That did not save. Nothing was counted.' };
+          render();
+        });
+    };
+  });
+
+  Array.prototype.forEach.call(document.querySelectorAll('[data-go]'), function(b){
+    b.onclick = function(){ openProfile(b.getAttribute('data-go')); };
+  });
+  Array.prototype.forEach.call(document.querySelectorAll('[data-react]'), function(b){
+    b.onclick = function(){
+      if (!me){ view = 'landing'; render(); window.scrollTo(0,0); return; }
+      var parts = b.getAttribute('data-react').split(':');
+      var count = b.querySelector('b');
+      var n = count ? Number(count.textContent) : 0;
+      var on = b.classList.toggle('on');           // answer immediately, correct later
+      n = Math.max(0, n + (on ? 1 : -1));
+      if (n) { if (count) count.textContent = n; else b.insertAdjacentHTML('beforeend', ' <b>' + n + '</b>'); }
+      else if (count) count.remove();
+      api('/api/posts/' + parts[0] + '/react', { method:'POST', body:{ kind: parts[1] }})
+        .catch(function(){ b.classList.toggle('on'); });
+    };
+  });
+
+  Array.prototype.forEach.call(document.querySelectorAll('[data-rep]'), function(b){
+    b.onclick = function(){ openReport(b.getAttribute('data-rep')); };
+  });
+
+  Array.prototype.forEach.call(document.querySelectorAll('[data-del]'), function(b){
+    b.onclick = function(){
+      var id = b.getAttribute('data-del');
+      b.textContent = 'deleting';
+      api('/api/posts/' + id, { method:'DELETE' })
+        .then(function(){ view === 'profile' ? openProfile(viewing || me.handle) : loadFeed(); })
+        .catch(function(err){ flash = { t:'err', m: err.message }; render(); });
+    };
+  });
+
+  /* ── suggesting a dream ── */
+  var sgB = $('sgBody'), sgS = $('sgSend'), sgC = $('sgCount');
+  if (sgB && sgS){
+    var sgTick = function(){
+      var n = sgB.value.trim().length;
+      sgC.textContent = n ? n + ' / 700' : '';
+      sgC.className = 'count' + (n > 640 ? ' warn' : '');
+      sgS.disabled = n < 4;
+    };
+    sgB.oninput = function(){ suggestDraft = sgB.value; sgTick(); };
+    sgTick();
+    var sgF = $('sgFrom');
+    if (sgF) sgF.oninput = function(){ suggestFrom = sgF.value; };
+    sgS.onclick = function(){
+      var body = sgB.value.trim(), contact = (sgF && sgF.value) || '';
+      sgS.disabled = true; sgS.textContent = 'Sending';
+      api('/api/suggest', { method:'POST', body:{ body:body, contact:contact.trim() }})
+        .then(function(){
+          suggestSent = true; suggestDraft = ''; suggestFrom = '';
+          render();
+        })
+        .catch(function(err){
+          // Their words stay in the box — held in state, not put back into the
+          // DOM afterwards, so the re-render draws the form already filled and
+          // the Send button is live again on the way past.
+          suggestDraft = body; suggestFrom = contact;
+          flash = { t:'err', m: err.message === 'offline'
+            ? 'That did not send. Your suggestion is still in the box.' : err.message };
+          render();
+        });
+    };
+  }
+  var sgBack = $('sgBack');
+  // Back to the grid, and the form resets so a second suggestion is possible.
+  if (sgBack) sgBack.onclick = function(){
+    suggestSent = false; openDream = null; render(); window.scrollTo(0, 0);
+  };
+
+  var ob = $('openComposer');
+  if (ob) ob.onclick = function(){ composerOpen = true; composerFocus = true; render(); };
+  var cb = $('closeComposer');
+  // Closing keeps the words. The collapsed line then says so, which is the
+  // whole reason it is safe to offer a way out of the box at all.
+  if (cb) cb.onclick = function(){
+    var t = $('composer'); if (t) composerDraft = t.value;
+    composerOpen = false; render();
+  };
+
+  var ta = $('composer'), pb = $('postBtn'), ct = $('count');
+  if (ta && pb){
+    var tick = function(){
+      var n = ta.value.trim().length;
+      ct.textContent = n + ' / ' + MAX_POST;
+      ct.className = 'count' + (n > MAX_POST ? ' over' : n > MAX_POST - 100 ? ' warn' : '');
+      pb.disabled = n === 0 || n > MAX_POST;
+    };
+    // Every keystroke in the search box re-renders the feed. Keep the draft
+    // somewhere that survives that, or searching mid-sentence eats the sentence.
+    ta.oninput = function(){ composerDraft = ta.value; tick(); };
+    tick();
+    if (composerFocus){
+      composerFocus = false;
+      ta.focus();
+      try { var n = ta.value.length; ta.setSelectionRange(n, n); } catch(e){}
+    }
+    pb.onclick = function(){
+      var text = ta.value.trim();
+      pb.disabled = true; pb.textContent = 'Posting';
+      api('/api/posts', { method:'POST', body:{ body:text }})
+        // care comes back true when what they wrote reads like it is about
+        // them rather than about a dream. Shown to them, once, and to nobody
+        // else — see the note on soundsLikeCrisis in the server.
+        .then(function(d){
+          // Posted and safely on the server: the box has done its job and
+          // folds away. Only clear the draft once it is somebody else's copy.
+          composerDraft = ''; composerOpen = false;
+          if (d && d.care) showCare();
+          loadFeed();
+        })
+        .catch(function(err){
+          // It did not send. The box stays open with every word in it —
+          // collapsing here would look exactly like losing their dream.
+          composerDraft = text; composerOpen = true;
+          flash = { t:'err', m: err.message === 'offline'
+            ? 'That did not send. Your words are still in the box below.' : err.message };
+          render();
+        });
+    };
+  }
+
+  var kv = $('keyv'), kr = $('keyReveal');
+  if (kr) kr.onclick = function(){
+    kr.textContent = kv.classList.toggle('blur') ? 'Reveal' : 'Hide';
+  };
+  var kc = $('keyCopy');
+  if (kc) kc.onclick = function(){
+    if (navigator.clipboard) navigator.clipboard.writeText(me.lucidKey || '');
+    kc.textContent = 'Copied'; setTimeout(function(){ kc.textContent = 'Copy'; }, 1600);
+  };
+
+  var avFile = $('avFile'), avName = $('avName');
+  if (avFile){
+    avFile.onchange = function(){
+      var f = avFile.files && avFile.files[0];
+      if (!f) return;
+      avName.style.color = '';
+      avName.textContent = 'Reading\u2026';
+      var img = new Image(), url = URL.createObjectURL(f);
+
+      img.onload = function(){
+        var c = document.createElement('canvas'), S = 128;
+        c.width = S; c.height = S;
+        var g = c.getContext('2d'), side = Math.min(img.width, img.height);
+        // Re-drawing through a canvas also drops every EXIF tag, GPS included.
+        g.drawImage(img, (img.width-side)/2, (img.height-side)/2, side, side, 0, 0, S, S);
+        var data = c.toDataURL('image/jpeg', 0.82);
+        URL.revokeObjectURL(url);
+
+        // Show it straight away so there is no doubt it took, then save it.
+        // No second button to press: every other site works this way.
+        var shown = document.querySelector('.phead .av');
+        if (shown) shown.innerHTML = '<img src="' + data + '" alt="">';
+        avName.textContent = 'Saving\u2026';
+
+        api('/api/me', { method:'PATCH', body:{ avatar: data }})
+          .then(function(d){
+            me = d.user;
+            // Flash after the reload, not before — openProfile renders twice
+            // and the first render would eat the message.
+            if (view === 'settings'){ flash = { t:'ok', m:'Picture saved.' }; render(); }
+            else openProfile(me.handle).then(function(){
+              flash = { t:'ok', m:'Picture saved.' }; render();
+            });
+          })
+          .catch(function(err){
+            flash = { t:'err', m: err.message === 'offline'
+              ? 'Could not reach Lucid, so the picture was not saved. Try again in a moment.'
+              : err.message };
+            openProfile(me.handle);
+          });
+      };
+
+      img.onerror = function(){
+        URL.revokeObjectURL(url);
+        avName.style.color = 'var(--error)';
+        avName.textContent = 'That image could not be read. iPhone photos are often HEIC, which browsers cannot open — take a screenshot of it and use that, or export as JPEG.';
+      };
+      img.src = url;
+    };
+  }
+  /* ── searching the feed ── */
+  var sb = $('srch');
+  if (sb){
+    sb.oninput = function(){ query = sb.value; searchFocus = true; render(); };
+    // Typing re-renders the feed, which would otherwise throw the cursor out
+    // of the box after every letter. Put it back where it was.
+    if (searchFocus){
+      searchFocus = false;
+      sb.focus();
+      try { var n = sb.value.length; sb.setSelectionRange(n, n); } catch(e){}
+    }
+  }
+  var sc = $('srchClr');
+  if (sc) sc.onclick = function(){ query = ''; searchFocus = true; render(); };
+
+  /* ── mall world drawing ── */
+  var mwFile = $('mwFile');
+  if (mwFile){
+    mwFile.onchange = function(){
+      var f = mwFile.files && mwFile.files[0];
+      var note = $('mwNote'), prev = $('mwPrev');
+      if (!f) return;
+      note.className = 'mwnote'; note.textContent = 'Reading…';
+      var img = new Image(), url = URL.createObjectURL(f);
+      img.onload = function(){
+        // Re-drawn through a canvas, so every EXIF tag goes, GPS with it.
+        // Long edge 1600 is enough to read a pencil line and small enough to
+        // send over a phone connection.
+        var MAX = 1600, w = img.width, h = img.height;
+        var scale = Math.min(1, MAX / Math.max(w, h));
+        var c = document.createElement('canvas');
+        c.width = Math.round(w * scale); c.height = Math.round(h * scale);
+        c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
+        var quality = 0.85, data = c.toDataURL('image/jpeg', quality);
+        // The server stops at 6 MB. Step down rather than fail at the end.
+        while (data.length > 5.2 * 1024 * 1024 && quality > 0.45){
+          quality -= 0.12; data = c.toDataURL('image/jpeg', quality);
+        }
+        URL.revokeObjectURL(url);
+        mwDrawing = data;
+        prev.innerHTML = '<img src="' + data + '" alt="">';
+        note.textContent = 'Ready to send. ' + Math.round(data.length / 1024 * 0.75) + ' KB.';
+      };
+      img.onerror = function(){
+        URL.revokeObjectURL(url);
+        mwDrawing = null;
+        prev.innerHTML = '<span>No file yet</span>';
+        note.className = 'mwnote bad';
+        note.textContent = 'That image could not be read. iPhone photos are often HEIC, which browsers cannot open — take a screenshot of it and send that instead.';
+      };
+      img.src = url;
+    };
+  }
+  var mwSend = $('mwSend');
+  if (mwSend) mwSend.onclick = function(){
+    var note = $('mwNote'), desc = $('mwDesc').value.trim();
+    if (!mwDrawing){
+      note.className = 'mwnote bad';
+      note.textContent = 'Choose a photo of your drawing first.';
+      return;
+    }
+    if (desc.length < 10){
+      // Deliberately not a flash: a flash re-renders, and a re-render would
+      // throw away whatever this person had already typed.
+      var d = $('mwDesc');
+      d.style.borderColor = 'var(--error)';
+      note.className = 'mwnote bad';
+      note.textContent = 'Write a line about what you remember too. A drawing on its own is hard to compare with anyone else’s.';
+      d.focus();
+      return;
+    }
+    mwSend.disabled = true; mwSend.textContent = 'Sending';
+    api('/api/mallworld', { method:'POST', body:{
+      image: mwDrawing, description: desc,
+      place: $('mwPlace').value.trim(), mayShare: $('mwShare').checked
+    }}).then(function(){
+      mwDrawing = null;
+      // Load first, then flash — the render inside loadSubmissions eats it otherwise.
+      loadSubmissions().then(function(){
+        flash = { t:'ok', m:'Got it. Thank you — it is on the pile.' };
+        render();
+      });
+    }).catch(function(err){
+      mwSend.disabled = false; mwSend.textContent = 'Send drawing';
+      flash = { t:'err', m: err.message === 'offline'
+        ? 'That did not send. Try again when Lucid is back.' : err.message };
+      render();
+    });
+  };
+
+  var avClear = $('avClear');
+  if (avClear) avClear.onclick = function(){
+    api('/api/me', { method:'PATCH', body:{ avatar:null }})
+      .then(function(d){
+        me = d.user;
+        flash = { t:'ok', m:'Picture removed.' }; render();
+      })
+      .catch(function(err){ flash = { t:'err', m: err.message }; render(); });
+  };
+
+  var sp = $('saveProfile');
+  if (sp) sp.onclick = function(){
+    sp.disabled = true; sp.textContent = 'Saving';
+    api('/api/me', { method:'PATCH', body: { bio: ($('bioIn') || {}).value || '' } })
+      .then(function(d){
+        me = d.user;
+        flash = { t:'ok', m:'Bio saved.' }; render();
+      })
+      .catch(function(err){ flash = { t:'err', m: err.message }; render(); });
+  };
+
+  function saveContact(value, done){
+    api('/api/me', { method:'PATCH', body: { contact: value } })
+      .then(function(d){ me = d.user; flash = { t:'ok', m: done }; render(); })
+      .catch(function(err){ flash = { t:'err', m: err.message }; render(); });
+  }
+  var sc2 = $('saveContact');
+  if (sc2) sc2.onclick = function(){
+    sc2.disabled = true; sc2.textContent = 'Saving';
+    saveContact(($('contactIn') || {}).value || '', 'Saved. It is on your profile now.');
+  };
+  var cc = $('clearContact');
+  if (cc) cc.onclick = function(){ saveContact('', 'Removed from your profile.'); };
+
+  var eb = $('encBtn');
+  if (eb) eb.onclick = function(){
+    var mine = $('encMine').value, theirs = $('encTheirs').value;
+    var date = $('encDate').value || null, note = $('encNote').value;
+    eb.disabled = true; eb.textContent = 'Recording';
+    api('/api/encounters', { method:'POST', body:{
+      ownKey: mine, otherKey: theirs, dreamDate: date, note: note
+    }}).then(function(){
+      // Load first, then flash \u2014 otherwise the render inside loadEncounters eats it.
+      return loadEncounters().then(function(){
+        flash = { t:'ok', m:'Recorded. Nothing is confirmed back to you \u2014 that is by design.' };
+        render();
+      });
+    }).catch(function(err){
+      flash = { t:'err', m: err.message === 'offline'
+        ? 'That did not send. Try again when Lucid is back.' : err.message };
+      render();
+    });
+  };
+
+  function doSignout(){
+    api('/api/signout', { method:'POST' }).catch(function(){})
+      .then(function(){
+        setToken(null);
+        me = null; view = 'landing'; viewing = null;
+        cache = { posts:[], profile:null, encounters:null, submissions:null, pulse:null, sheep:null };
+        render(); loadStats();
+      });
+  }
+  var stat = $('feedstat');
+  if (stat) fillStat(stat);
+
+  var so = $('signout'); if (so) so.onclick = doSignout;
+  var tso = $('topSignout'); if (tso) tso.onclick = doSignout;
+}
+
+/* ── loaders ─────────────────────────────── */
+function loadFeed(){
+  view = 'feed'; viewing = null; query = '';
+  return api('/api/posts?limit=300').then(function(d){
+    cache.posts = d.posts || []; render();
+  }).catch(function(){ cache.posts = []; render(); });
+}
+/* Public on purpose. The counts are the reason somebody who has not signed up
+   stays on the page: reading that a third of people find rooms that should not
+   exist is one thing, seeing that a third of the people HERE say so is another. */
+function loadDreams(){
+  return api('/api/dreams')
+    .then(function(d){ cache.dreams = d; render(); })
+    .catch(function(){ /* the page reads fine with no tally at all */ });
+}
+
+function loadEncounters(){
+  view = 'key'; viewing = null; cache.encounters = null; render();
+  return api('/api/encounters').then(function(d){
+    cache.encounters = d.encounters || []; render();
+  }).catch(function(){ cache.encounters = []; render(); });
+}
+/* Public — no account needed to look at it. */
+function loadPulse(){
+  return fetch(API + '/api/pulse?days=30&x=' + Date.now())
+    .then(function(r){ return r.json(); })
+    .then(function(d){ cache.pulse = d; if (view === 'pulse') render(); })
+    .catch(function(){ cache.pulse = { window:{ enough:false, total:0, authors:0 } };
+                       if (view === 'pulse') render(); });
+}
+
+/* The sheep board, only to put a line on the games page. It is allowed to fail
+   without saying anything: the browser knows your own best on its own, and a
+   game you can play is not worth an error message about a scoreboard. */
+function loadSheep(){
+  return api('/api/sheep')
+    .then(function(d){ cache.sheep = d; if (view === 'games') render(); })
+    .catch(function(){});
+}
+function loadWake(){
+  return api('/api/wake')
+    .then(function(d){ cache.wake = d; if (view === 'games') render(); })
+    .catch(function(){});
+}
+
+function loadSubmissions(){
+  if (!me) return Promise.resolve();
+  return api('/api/mallworld').then(function(d){
+    cache.submissions = d.submissions || [];
+    if (view === 'mall') render();
+  }).catch(function(){ /* the form still works without the list */ });
+}
+function openProfile(handle){
+  view = 'profile'; viewing = handle === (me && me.handle) ? null : handle;
+  cache.profile = null; render();
+  return api('/api/profile/' + encodeURIComponent(handle)).then(function(d){
+    cache.profile = d; render(); window.scrollTo(0,0);
+  }).catch(function(err){ flash = { t:'err', m: err.message }; cache.profile = null; render(); });
+}
+
+/* ── how many dreamers ───────────────────── */
+var stats = null;
+function loadStats(){
+  return fetch(API + '/api/stats', { credentials:'include' })
+    .then(function(r){ return r.json(); })
+    .then(function(d){
+      stats = d;
+      var el = document.getElementById('counter');
+      if (el && typeof d.dreamers === 'number'){
+        el.innerHTML = '<b>' + d.dreamers.toLocaleString() + '</b> ' +
+          (d.dreamers === 1 ? 'dreamer' : 'dreamers');
+        el.classList.add('show');
+      }
+      var st = document.getElementById('feedstat');
+      if (st) fillStat(st);
+      // The Support headline is already on the page by the time this answers.
+      // Written straight into the heading rather than re-rendering, so that a
+      // half-typed sign-in form underneath it is not thrown away.
+      var sh = document.querySelector('#support h2');
+      if (sh) sh.textContent = supportHead();
+    })
+    .catch(function(){ /* a missing count is not worth an error message */ });
+}
+
+// Numbers only. Who met whom, and what they wrote, stays between them.
+function fillStat(el){
+  if (!stats) return;
+  var n = stats.encounters || 0;
+  el.innerHTML = n
+    ? '<b>' + n + '</b> ' + (n === 1 ? 'encounter has' : 'encounters have') + ' been confirmed by both dreamers'
+    : 'No encounters confirmed yet';
+}
+
+/* ── starfield ───────────────────────────── */
+(function(){
+  var el = document.getElementById('stars'), frag = document.createDocumentFragment();
+  for (var i=0;i<130;i++){
+    var s = document.createElement('div'), size = Math.random()*2 + 0.5;
+    s.className = 'star';
+    s.style.cssText = 'width:'+size+'px;height:'+size+'px;top:'+(Math.random()*100)+'%;left:'+(Math.random()*100)+'%;--d:'+(2+Math.random()*4)+'s;--o:'+(0.2+Math.random()*0.5)+';animation-delay:'+(Math.random()*4)+'s';
+    frag.appendChild(s);
+  }
+  el.appendChild(frag);
+})();
+
+/* ── add to home screen ──────────────────── */
+(function(){
+  var el = document.getElementById('a2hs'), x = document.getElementById('a2hsX');
+  if (!el || !x) return;
+  var iOS = /iP(hone|ad|od)/.test(navigator.userAgent);
+  var standalone = window.navigator.standalone === true ||
+    (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches);
+  var dismissed = false;
+  try { dismissed = localStorage.getItem('lucid_a2hs') === 'off'; } catch(e){}
+  if (!iOS || standalone || dismissed) return;
+  setTimeout(function(){ el.classList.add('show'); }, 4000);
+  x.onclick = function(){
+    el.classList.remove('show');
+    try { localStorage.setItem('lucid_a2hs','off'); } catch(e){}
+  };
+})();
+
+/* ── counting this visit ─────────────────────
+   Once per page load, not once per render. Sends a random id that this
+   browser made up for itself and the host of whatever linked here — never
+   the full referring URL, which can carry search terms.
+
+   The server hashes that id together with today's date before storing it,
+   so it counts you once today and cannot recognise you tomorrow. If any of
+   this fails, nothing happens: the whole thing is wrapped and the page
+   never waits on it. */
+function countVisit(){
+  var id;
+  try {
+    id = localStorage.getItem('lucid_b');
+    if (!id){
+      id = (crypto.randomUUID ? crypto.randomUUID() : String(Math.random()).slice(2) + Date.now())
+             .replace(/[^a-zA-Z0-9]/g,'').slice(0,32);
+      localStorage.setItem('lucid_b', id);
+    }
+  } catch(e){ id = ''; }   // private browsing: still counts as a load, just not as a browser
+
+  var host = '';
+  try { if (document.referrer) host = new URL(document.referrer).hostname; } catch(e){}
+
+  try {
+    fetch(API + '/api/visit', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ bid: id, ref: host }), keepalive: true
+    }).catch(function(){});
+  } catch(e){}
+}
+
+/* ── boot ────────────────────────────────── */
+render();
+countVisit();
+loadStats();
+api('/api/me').then(function(d){
+  // loadFeed sets the view, so a signed-in arrival would otherwise be
+  // bounced off the page the link asked for.
+  if (d.user){ me = d.user; wantSupport ? render() : loadFeed(); }
+}).catch(function(){ /* landing is already on screen; the banner explains it */ });
+
+})();
+</script>
+</body>
+</html>

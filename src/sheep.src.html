@@ -1,0 +1,1108 @@
+<meta charset="utf-8">
+<!-- Without this a phone lays the page out at 980px and then zooms the whole
+     thing out to fit, which made the sheep and the board too small to read and
+     put every tap through a scale factor. The artifact preview supplies its own
+     viewport tag, so the page looked right everywhere except the real site. -->
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#07070c">
+<title>Counting Sheep</title>
+<!-- The typeface does not come from Google any more.
+     Inter was fetched from Google's font servers, which meant every visitor's
+     browser handed Google their IP address and user agent — on every page,
+     before signing up, including someone who only ever reads the front page
+     once and leaves. Lucid stores no IP addresses of its own, so a font was
+     the single thing on this site giving a stranger's address to a company.
+
+     The system face costs nothing, needs no network, and cannot leak anything.
+     The typewriter face is what Lucid actually sounds like, and that one has
+     always been base64 inside this file. -->
+<style>
+@font-face{
+  font-family:'Secret Typewriter';
+  src:url(__FONT_URI__) format('woff2');
+  font-weight:400; font-style:normal; font-display:swap;
+}
+
+/* Lucid's own palette. This is a single-theme page on purpose — the site it
+   belongs to is black at every hour, and a game about falling asleep has no
+   business being white. Every colour is painted explicitly so the page holds
+   whatever ground the viewer's app puts behind it. */
+:root{
+  --night:#000; --deep:#070709; --void:#0e0e18; --mist:#191926;
+  --lunar:#e8e4f0; --dream:#a89bc8; --glow:#7b6fa8; --pulse:#c4b5e8;
+  --gold:#d4af6a; --error:#e07070;
+  --edge:rgba(168,155,200,.16);
+  --type:'Secret Typewriter','Courier New',monospace;
+  --sans:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'Helvetica Neue',Arial,sans-serif;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+/* The browser's own rule for the hidden attribute is display:none, and any
+   display given to a class beats it. Several things here are flex and are
+   hidden by attribute — the legend on the game-over panel, the two scores
+   before anyone has one — so this has to win. */
+[hidden]{display:none!important}
+body{
+  background:var(--night); color:var(--dream);
+  font-family:var(--sans); font-weight:300;
+  min-height:100vh; display:flex; align-items:flex-start; justify-content:center;
+  padding:24px 16px;
+}
+/* Centred with an auto margin rather than align-items:center. Centring a flex
+   item that is taller than the window pushes its top ABOVE the top of the
+   page, where it cannot be scrolled to — on a short laptop screen the count
+   and the way back to the site were simply gone. An auto margin centres when
+   there is room and gives up when there is not. */
+.frame{width:100%;max-width:760px;margin:auto;display:flex;flex-direction:column;gap:18px}
+
+/* header */
+.top{display:flex;align-items:flex-end;justify-content:space-between;gap:20px;flex-wrap:wrap}
+.name{
+  font-family:var(--type);font-size:15px;letter-spacing:.34em;text-transform:uppercase;
+  color:var(--glow);text-decoration:none;display:inline-flex;align-items:center;gap:9px;
+  transition:color .25s;
+}
+.name:hover{color:var(--pulse)}
+.name:focus-visible{outline:1px solid var(--pulse);outline-offset:4px}
+.name .arrow{letter-spacing:0;font-size:14px}
+.tools{display:flex;align-items:center;gap:18px}
+/* Sound is off until it is asked for, so this button's job is to be findable
+   without being a suggestion. It reads as part of the furniture until you
+   want it, which is the right weight for a control on a game about sleeping. */
+.snd{
+  background:none;border:none;padding:4px;cursor:pointer;color:var(--glow);
+  display:inline-flex;line-height:0;transition:color .25s;
+}
+.snd:hover{color:var(--pulse)}
+.snd:focus-visible{outline:1px solid var(--pulse);outline-offset:3px;border-radius:2px}
+.snd[aria-pressed="true"]{color:var(--pulse)}
+.snd svg{width:17px;height:17px;display:block}
+.snd .wave{opacity:0;transition:opacity .25s}
+.snd[aria-pressed="true"] .wave{opacity:1}
+.snd .slash{opacity:1;transition:opacity .25s}
+.snd[aria-pressed="true"] .slash{opacity:0}
+.lives{display:flex;gap:9px;align-items:center}
+.moon{width:11px;height:11px;border-radius:50%;background:var(--pulse);box-shadow:0 0 10px rgba(196,181,232,.5);transition:background .4s,box-shadow .4s,transform .4s}
+.moon.gone{background:var(--mist);box-shadow:none;transform:scale(.7)}
+
+/* the count */
+.tally{text-align:center;line-height:1}
+.tally .n{
+  font-family:var(--type);font-size:clamp(56px,15vw,104px);color:var(--gold);
+  font-variant-numeric:tabular-nums;letter-spacing:.04em;display:block;
+  transition:transform .12s ease-out;
+}
+.tally .n.bump{transform:scale(1.07)}
+.tally .cap{
+  display:block;margin-top:6px;font-size:10px;letter-spacing:.28em;
+  text-transform:uppercase;color:var(--glow);font-weight:500;
+}
+
+/* The field, and the panel that covers it, are stacked in ONE grid cell
+   rather than the panel being pinned over the canvas. That way the row is as
+   tall as whichever needs more room. Pinned, the panel was clipped by the
+   canvas's own height — which on a phone is barely 160px — and the title and
+   the button were cut off the top and bottom of it. */
+.field{
+  position:relative;display:grid;
+  border:1px solid var(--edge);border-radius:3px;background:var(--deep);overflow:hidden;
+}
+canvas{grid-area:1/1;align-self:center;display:block;width:100%;height:auto;touch-action:manipulation}
+
+/* The end of a round is the one moment somebody is definitely looking at
+   this page and has just finished doing something. It sits beside Again as
+   a link, not a second button: the game is what they came for, and a bright
+   ask next to it would read as the price of playing. */
+.endrow{display:flex;align-items:center;justify-content:center;gap:20px;flex-wrap:wrap}
+.give{
+  font-family:var(--sans);font-size:11px;font-weight:600;letter-spacing:.2em;
+  text-transform:uppercase;color:var(--glow);text-decoration:none;
+  border-bottom:1px solid rgba(168,155,200,.3);padding-bottom:3px;
+  transition:color .2s,border-color .2s;
+}
+.give:hover{color:var(--pulse);border-color:var(--pulse)}
+.give:focus-visible{outline:2px solid var(--pulse);outline-offset:3px}
+
+/* a line of text that drifts across the field now and then */
+.murmur{
+  position:absolute;left:0;right:0;top:30%;text-align:center;pointer-events:none;
+  font-family:var(--type);font-size:clamp(15px,3.4vw,20px);color:var(--lunar);
+  text-shadow:0 2px 14px rgba(0,0,0,.9),0 0 30px rgba(0,0,0,.8);
+  opacity:0;transition:opacity 1.4s ease;padding:0 24px;text-wrap:balance;
+}
+.murmur.on{opacity:.9}
+
+/* the panel that covers the field before and after a round */
+.veil{
+  grid-area:1/1;display:flex;flex-direction:column;align-items:center;
+  justify-content:center;gap:15px;text-align:center;padding:26px 22px;
+  background:rgba(0,0,0,.82);backdrop-filter:blur(3px);
+}
+.veil[hidden]{display:none}
+/* The game's own painted sign, cut out of the sprite sheet at load. It is
+   decoration on top of the heading, never a replacement for it — the words
+   have to exist as text for anyone who cannot see the picture. */
+.sign{width:min(230px,54%);height:auto;display:block;image-rendering:auto}
+.veil h1{font-family:var(--type);font-size:clamp(23px,5.4vw,36px);font-weight:400;color:var(--lunar);line-height:1.2;text-wrap:balance}
+.veil p{font-size:14.5px;line-height:1.7;color:var(--dream);max-width:44ch}
+.veil .small{font-size:12.5px;color:var(--glow);line-height:1.7;max-width:46ch}
+.btn{
+  font-family:var(--sans);font-size:11px;font-weight:600;letter-spacing:.2em;
+  text-transform:uppercase;background:var(--dream);color:var(--night);
+  border:none;border-radius:2px;padding:15px 30px;cursor:pointer;
+  transition:background .25s,opacity .25s;
+}
+.btn:hover{background:var(--pulse)}
+.btn:focus-visible{outline:1px solid var(--pulse);outline-offset:3px}
+.btn[disabled]{opacity:.45;cursor:default;background:var(--dream)}
+
+/* how to play — now the real sprites, cut from the same sheet the game uses,
+   so what the legend shows and what walks across the field cannot drift apart */
+.rules{display:flex;gap:26px;flex-wrap:wrap;justify-content:center;padding-top:2px}
+.rule{display:flex;align-items:center;gap:10px;font-size:12.5px;color:var(--glow);line-height:1.5}
+.ico{width:58px;height:58px;flex:none;object-fit:contain}
+
+/* the two numbers on the veil: yours, and the best anyone has managed */
+.bests{display:flex;gap:34px;justify-content:center;flex-wrap:wrap}
+.best{display:flex;flex-direction:column;align-items:center;gap:5px}
+.best b{
+  font-family:var(--type);font-size:30px;font-weight:400;color:var(--gold);
+  font-variant-numeric:tabular-nums;line-height:1;
+}
+.best span{font-size:9.5px;letter-spacing:.24em;text-transform:uppercase;color:var(--glow);font-weight:500}
+.best.quiet b{color:var(--glow)}
+
+/* the board */
+.board{border:1px solid var(--edge);border-radius:3px;padding:20px 22px 18px;background:var(--deep)}
+.bhead{
+  display:flex;align-items:baseline;justify-content:space-between;gap:14px;
+  padding-bottom:12px;margin-bottom:6px;border-bottom:1px solid var(--edge);
+}
+.btitle{font-family:var(--type);font-size:11.5px;letter-spacing:.28em;text-transform:uppercase;color:var(--dream)}
+.bnote{font-size:11px;color:var(--glow);letter-spacing:.04em}
+.brow{
+  display:flex;align-items:baseline;gap:12px;padding:7px 0;font-size:14px;color:var(--dream);
+  border-bottom:1px solid rgba(168,155,200,.07);
+}
+.brow:last-child{border-bottom:none}
+.brow .r{
+  font-family:var(--type);font-size:12px;color:var(--glow);width:2.4em;flex:none;
+  font-variant-numeric:tabular-nums;
+}
+.brow .h{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.brow .s{font-family:var(--type);color:var(--gold);font-variant-numeric:tabular-nums}
+.brow.me{color:var(--lunar)}
+/* Written into the row rather than added with ::after, so that it is read out
+   as well as seen. A marker that only exists in the stylesheet is invisible to
+   anybody using a screen reader. */
+.brow .you{color:var(--glow);font-size:12px;margin-left:7px}
+.brow.gap{border-top:1px solid var(--edge);margin-top:4px;padding-top:11px}
+.bempty{font-size:13px;color:var(--glow);line-height:1.7;padding:6px 0 2px}
+.bfoot{font-size:11.5px;color:var(--glow);line-height:1.6;padding-top:12px}
+
+.foot{font-size:12px;color:var(--glow);line-height:1.7;text-align:center;max-width:56ch;margin:0 auto}
+
+@media (prefers-reduced-motion:reduce){
+  *{transition:none!important}
+}
+</style>
+
+<div class="frame">
+  <div class="top">
+    <a class="name" href="https://lucidatnight.com/"><span class="arrow" aria-hidden="true">&larr;</span> Lucid</a>
+    <div class="tools">
+      <button class="snd" id="snd" type="button" aria-pressed="false" aria-label="Turn sound on">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"
+             stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M4 9v6h4l5 4V5L8 9H4z" fill="currentColor" stroke="none"/>
+          <g class="wave"><path d="M16.5 8.8a4.5 4.5 0 0 1 0 6.4"/><path d="M19.2 6.2a8 8 0 0 1 0 11.6"/></g>
+          <path class="slash" d="M17 9.5l5 5m0-5l-5 5"/>
+        </svg>
+      </button>
+      <div class="lives" id="lives" aria-label="Attention remaining">
+        <span class="moon"></span><span class="moon"></span><span class="moon"></span>
+      </div>
+    </div>
+  </div>
+
+  <div class="tally">
+    <span class="n" id="count">0</span>
+    <span class="cap" id="cap">sheep counted</span>
+  </div>
+
+  <div class="field">
+    <canvas id="cv" width="1480" height="620" aria-label="A moonlit farm. Sheep run from right to left and jump the fence."></canvas>
+    <div class="murmur" id="murmur"></div>
+
+    <div class="veil" id="veil">
+      <img class="sign" id="sign" alt="" hidden>
+      <h1 id="vh">Count them as they jump.</h1>
+      <p id="vp">They only count while they are in the air. Tap each sheep as it clears the fence — white or black, both count. Some of them are wolves wearing fleece: grey muzzle, yellow eyes, teeth. Count a wolf, or let a sheep past, and you lose a little of your attention.</p>
+      <div class="rules" id="vrules">
+        <span class="rule"><img class="ico" id="icoSheep" alt="" src="data:image/gif;base64,R0lGODlhAQABAAAAACH5BAEKAAEALAAAAAABAAEAAAICTAEAOw=="> count these</span>
+        <span class="rule"><img class="ico" id="icoWolf" alt="" src="data:image/gif;base64,R0lGODlhAQABAAAAACH5BAEKAAEALAAAAAABAAEAAAICTAEAOw=="> never count a wolf</span>
+      </div>
+      <div class="bests" id="bests" hidden>
+        <span class="best"><b id="myBest">0</b><span>your best</span></span>
+        <span class="best quiet"><b id="topBest">—</b><span id="topWho">top score</span></span>
+      </div>
+      <div class="endrow">
+        <button class="btn" id="go" disabled>Loading…</button>
+        <a class="give" id="give" href="https://lucidatnight.com/#support" hidden>Support Lucid</a>
+      </div>
+      <p class="small" id="vs">Three lapses and the night is over.</p>
+    </div>
+  </div>
+
+  <div class="board">
+    <div class="bhead">
+      <span class="btitle">Leaderboard</span>
+      <span class="bnote" id="bnote"></span>
+    </div>
+    <div id="brows"></div>
+    <p class="bfoot" id="bfoot"></p>
+  </div>
+
+  <p class="foot">Counting sheep is supposed to send you to sleep, not wake you up. If it stops being restful, stop playing and go to bed.</p>
+</div>
+
+<script>
+(function () {
+  'use strict';
+
+  var cv = document.getElementById('cv');
+  var ctx = cv.getContext('2d');
+  var countEl = document.getElementById('count');
+  var capEl = document.getElementById('cap');
+  var livesEl = document.getElementById('lives');
+  var murmurEl = document.getElementById('murmur');
+  var veil = document.getElementById('veil');
+  var signEl = document.getElementById('sign');
+  var vh = document.getElementById('vh');
+  var vp = document.getElementById('vp');
+  var vs = document.getElementById('vs');
+  var vrules = document.getElementById('vrules');
+  var giveEl = document.getElementById('give');
+  var goBtn = document.getElementById('go');
+  var bestsEl = document.getElementById('bests');
+  var myBestEl = document.getElementById('myBest');
+  var topBestEl = document.getElementById('topBest');
+  var topWhoEl = document.getElementById('topWho');
+  var browsEl = document.getElementById('brows');
+  var bnoteEl = document.getElementById('bnote');
+  var bfootEl = document.getElementById('bfoot');
+
+  var calm = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  /* ── scores ──────────────────────────────────────────────
+     Two places a score can live, and they answer different questions.
+
+     The browser keeps your own best. That works signed out, offline, and on
+     the first visit, which is when most people play — asking somebody to make
+     an account before the game will tell them how they did is a good way to
+     have them close the tab.
+
+     The server keeps the board. It needs an account, because a leaderboard
+     of numbers with nobody attached is just a list. */
+  var API = 'https://sentinel.tailb152cd.ts.net';
+  var BEST_KEY = 'lucid_sheep_best';
+
+  function token()      { try { return localStorage.getItem('lucid_token'); } catch (e) { return null; } }
+  function localBest()  { try { return Math.max(0, Number(localStorage.getItem(BEST_KEY)) || 0); } catch (e) { return 0; } }
+  function keepBest(n)  { try { if (n > localBest()) localStorage.setItem(BEST_KEY, String(n)); } catch (e) {} }
+
+  var board = null;          // what the server last told us
+  var reachable = true;      // false once a request fails, so we say so plainly
+  var roundStart = 0;
+
+  function esc(s) {
+    return String(s).replace(/[&<>"]/g, function (c) {
+      return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c];
+    });
+  }
+
+  function myBestNumber() {
+    // Whichever is higher. Somebody who played signed out and then signed in
+    // should not be told their best is zero.
+    return Math.max(localBest(), (board && board.you && board.you.best) || 0);
+  }
+
+  function paintBests() {
+    var mine = myBestNumber();
+    myBestEl.textContent = mine;
+    if (board && board.top && board.top.length) {
+      topBestEl.textContent = board.top[0].best;
+      topWhoEl.textContent = board.top[0].handle + ' leads';
+    } else {
+      topBestEl.textContent = '—';
+      topWhoEl.textContent = 'top score';
+    }
+    // Shown as soon as the board has been reached, even when it is empty. An
+    // empty pair of numbers with their labels tells you where your score will
+    // appear; hiding them left people asking where the leaderboard was.
+    bestsEl.hidden = !(mine > 0 || board);
+  }
+
+  function row(rank, handle, score, me, gap) {
+    return '<div class="brow' + (me ? ' me' : '') + (gap ? ' gap' : '') + '">' +
+           '<span class="r">' + rank + '</span>' +
+           '<span class="h">' + esc(handle) + (me ? '<span class="you">— you</span>' : '') + '</span>' +
+           '<span class="s">' + score + '</span></div>';
+  }
+
+  function paintBoard() {
+    // The board coming back with a "you" on it is proof of a session, whatever
+    // the page can or cannot find in its own storage. Telling somebody the
+    // server has already named to sign in is the sort of thing that makes a
+    // site feel broken.
+    var signedIn = !!token() || !!(board && board.you);
+
+    if (!board) {
+      browsEl.innerHTML = '<p class="bempty">' +
+        (reachable ? 'Fetching the board…' : 'The board is out of reach right now. Your own best is kept in this browser either way.') +
+        '</p>';
+      bnoteEl.textContent = '';
+      bfootEl.textContent = '';
+      return;
+    }
+
+    var top = board.top || [];
+    var you = board.you;
+    var html = '';
+
+    if (!top.length) {
+      html = '<p class="bempty">Nobody has counted a sheep yet. The first person to finish a round is top of it.</p>';
+    } else {
+      for (var i = 0; i < top.length; i++) {
+        var mine = !!(you && you.handle === top[i].handle);
+        html += row(i + 1, top[i].handle, top[i].best, mine, false);
+      }
+      // If you are not on the visible part of the board, your own line is
+      // added underneath it, so the board always answers "where am I".
+      if (you && you.best > 0 && you.rank > top.length) {
+        html += row(you.rank, you.handle, you.best, true, true);
+      }
+    }
+    browsEl.innerHTML = html;
+
+    bnoteEl.textContent = board.players
+      ? board.players + (board.players === 1 ? ' dreamer' : ' dreamers')
+      : '';
+
+    if (!signedIn) {
+      bfootEl.textContent = 'Your best is kept in this browser. Sign in on Lucid and it goes on the board with your name.';
+    } else if (!you || !you.best) {
+      bfootEl.textContent = 'Finish a round and you are on it.';
+    } else if (!reachable) {
+      bfootEl.textContent = 'The board could not be reached just now — this is the last version of it.';
+    } else {
+      bfootEl.textContent = 'Ties go to whoever got there first.';
+    }
+  }
+
+  function loadBoard() {
+    var t = token();
+    // credentials go too. The bearer token lives in localStorage, which is
+    // per-origin: everybody signed in on lucidatnight.github.io lost theirs
+    // the day the site moved to lucidatnight.com. The session cookie survived
+    // that move, so sending it is what keeps those people signed in here.
+    fetch(API + '/api/sheep', {
+      credentials: 'include',
+      headers: t ? { Authorization: 'Bearer ' + t } : {}
+    })
+      // Anything other than a board is treated the same as no answer at all,
+      // so the page says the board is out of reach instead of sitting on
+      // "Fetching…" forever.
+      .then(function (r) { if (!r.ok) throw new Error('no board'); return r.json(); })
+      .then(function (d) {
+        reachable = true; board = d;
+        paintBoard(); paintBests();
+      })
+      .catch(function () { reachable = false; paintBoard(); });
+  }
+
+  /* A finished round. The local best is kept whatever happens — the server
+     is a nice-to-have here, and a game that loses your score because a
+     server was down would be a worse game. */
+  function submit(score, ms) {
+    keepBest(score);
+    paintBests();
+
+    // No early return on a missing token. Whether this round counts is the
+    // server's call, not the page's — it accepts a cookie as readily as a
+    // bearer token, and a signed-out round is simply refused and ignored.
+    var t = token();
+    var headers = { 'Content-Type': 'application/json' };
+    if (t) headers.Authorization = 'Bearer ' + t;
+
+    fetch(API + '/api/sheep', {
+      method: 'POST',
+      credentials: 'include',
+      headers: headers,
+      body: JSON.stringify({ score: score, ms: ms })
+    })
+      .then(function (r) { return r.ok ? r.json() : null; })
+      .then(function (d) {
+        if (!d) return;
+        reachable = true; board = d;
+        paintBoard(); paintBests();
+      })
+      .catch(function () { reachable = false; paintBoard(); });
+  }
+
+  /* The field is drawn in a fixed coordinate space and scaled to whatever
+     width the page gives it, so the sheep are the same size on a phone as on
+     a laptop and nothing has to be recalculated on resize. */
+  /* A phone gets a narrower field than a laptop.
+   *
+   * One fixed 1480x620 rectangle scaled to the page width is a calm wide view
+   * on a laptop. On a 390px phone the same rectangle arrives about 350x147 —
+   * a letterbox slot with sheep the size of a fingernail. The canvas cannot be
+   * made bigger than the screen, so the answer is to put LESS FIELD in it:
+   * same height, less width, and everything in it is drawn larger relative to
+   * the glass.
+   *
+   * That trade costs warning time — a narrower field means a sheep is visible
+   * for a shorter distance before it reaches the fence. So the speed is scaled
+   * by the distance as well. A sheep takes the same number of seconds to cross
+   * on a phone as on a laptop, the spawn schedule is untouched, and a round
+   * played on either is the same round. That last part matters beyond feel:
+   * the server checks a score against the spawn schedule to see whether it was
+   * humanly possible, and a phone that played faster would fail that check.
+   *
+   * Chosen once at load. Rotating the phone mid-round does not rebuild the
+   * world underneath you.
+   */
+  var WIDE = 1480, NARROW = 820;
+  var W = (window.innerWidth || WIDE) < 620 ? NARROW : WIDE;
+  var H = 620;
+  var PACE = (W + 200) / (WIDE + 200);   // same seconds to cross, whatever the width
+
+  /* The element's width/height attributes ARE the drawing surface — the CSS
+     width:100% only stretches that surface to the page afterwards. Both have
+     to agree with W, or the field is drawn at one size and shown at another. */
+  cv.width = W;
+  cv.height = H;
+
+  var GROUND = H * 0.70;          // where the sheep walk
+  var FENCE_X = W * 0.40;         // they jump here
+  var FENCE_TOP = 64;             // how far the rails stand above the ground
+  /* How far out the take-off and landing are. Narrower than it was (190),
+     which makes the hop quicker and punchier without touching how fast the
+     sheep cross or when they spawn — so the server's check on round length,
+     which is built from the spawn schedule alone, is unaffected. It does
+     shorten the window you have to tap one: at a count of 100 you get 0.80
+     seconds instead of 0.95. */
+  var SPAN = 160;                 // how far out the take-off and landing are
+  var HEIGHT = 150;               // apex of the arc
+  var FOOT = GROUND + 34;         // the line their hooves stand on
+
+  /* The arc is a function of WHERE the animal is, not how long it has been
+     jumping. Tied to time, a fast sheep was already past the fence before it
+     got any height and appeared to go straight through it. Tied to position,
+     the apex sits exactly over the rails at every speed. */
+  function liftAt(x) {
+    var d = FENCE_X - x;                       // negative before, positive after
+    if (d < -SPAN || d > SPAN) return 0;
+    return Math.sin(((d + SPAN) / (SPAN * 2)) * Math.PI) * HEIGHT;
+  }
+
+  /* ── the art ─────────────────────────────────────────────
+     One atlas and one backdrop, both real files next to this page rather than
+     base64 inside it. They are the two biggest things the game loads and they
+     never change between rounds, so letting the browser cache them separately
+     is worth two extra requests.
+
+     The frame table is the same for all three characters: four idle, four run,
+     then rise / airborne / land. That is how the sheet was drawn, and it is why
+     a sheep and a wolf can share one animation routine. */
+  var FRAMES = {"bi0":[143,361,69,87],"bi1":[0,361,68,89],"bi2":[696,265,72,90],"bi3":[68,361,75,88],"bj0":[357,361,66,84],"bj1":[901,161,75,96],"bj2":[768,265,81,90],"br0":[137,265,92,95],"br1":[816,161,85,96],"br2":[568,161,88,100],"br3":[771,361,75,80],"cloud0":[846,361,119,75],"cloud1":[0,450,201,75],"cloud2":[395,450,163,65],"cloud3":[558,450,136,58],"fence":[423,361,151,84],"fi0":[874,0,76,105],"fi1":[316,161,75,102],"fi2":[0,161,70,104],"fi3":[950,0,74,105],"fj0":[782,0,92,106],"fj1":[158,161,83,104],"fj2":[241,161,75,103],"fr0":[483,161,85,101],"fr1":[391,161,92,102],"fr2":[687,0,95,109],"fr3":[70,161,88,104],"isle0":[230,0,169,158],"isle1":[399,0,167,143],"isle2":[566,0,121,117],"prop0":[656,361,115,82],"prop1":[201,450,106,71],"prop2":[0,265,137,96],"prop3":[307,450,88,67],"prop4":[229,265,74,94],"prop5":[656,161,72,100],"sign":[0,0,230,161],"wi0":[303,265,74,92],"wi1":[849,265,73,89],"wi2":[922,265,74,89],"wi3":[453,265,81,91],"wj0":[212,361,65,86],"wj1":[377,265,76,92],"wj2":[574,361,82,82],"wr0":[534,265,85,91],"wr1":[619,265,77,91],"wr2":[728,161,88,98],"wr3":[277,361,80,85]};
+
+  var atlas = new Image();
+  var bg = new Image();
+  var ready = 0, broken = false;
+
+  function draw(key, cx, footY, scale, flip, tilt, alpha) {
+    var f = FRAMES[key];
+    if (!f) return;
+    var w = f[2] * scale, h = f[3] * scale;
+    ctx.save();
+    if (alpha !== undefined) ctx.globalAlpha = alpha;
+    ctx.translate(cx, footY - h / 2);
+    if (tilt) ctx.rotate(tilt);
+    if (flip) ctx.scale(-1, 1);
+    ctx.drawImage(atlas, f[0], f[1], f[2], f[3], -w / 2, -h / 2, w, h);
+    ctx.restore();
+  }
+
+  /* Cut one frame out of the atlas and hand it back as its own image. Used for
+     the title sign and the two legend icons, which have to be real <img>
+     elements so they lay out with the text and get read as pictures. Doing it
+     from the atlas means there is exactly one copy of the art on the wire. */
+  function cutOut(key, el, scale) {
+    var f = FRAMES[key];
+    var c = document.createElement('canvas');
+    c.width = f[2] * scale; c.height = f[3] * scale;
+    var g = c.getContext('2d');
+    g.imageSmoothingQuality = 'high';
+    g.drawImage(atlas, f[0], f[1], f[2], f[3], 0, 0, c.width, c.height);
+    try { el.src = c.toDataURL('image/png'); el.hidden = false; } catch (e) {}
+  }
+
+  function armed() {
+    ready++;
+    if (ready < 2) return;
+    cutOut('sign', signEl, 1);
+    cutOut('wi0', document.getElementById('icoSheep'), 1);
+    cutOut('fi2', document.getElementById('icoWolf'), 1);
+    goBtn.disabled = false;
+    goBtn.textContent = 'Begin';
+  }
+
+  function failed() {
+    if (broken) return;
+    broken = true;
+    goBtn.textContent = 'Reload';
+    goBtn.disabled = false;
+    vp.textContent = 'The pictures for this game did not load. Reloading usually fixes it.';
+  }
+
+  atlas.onload = armed;  atlas.onerror = failed;
+  bg.onload = function () { placeBg(); armed(); };
+  bg.onerror = failed;
+  atlas.src = 'img/sheep-atlas.png';
+  bg.src = 'img/sheep-bg.jpg';
+
+  /* The backdrop is a still painting, not a tiling strip, so it is placed once
+     and then left alone. Scaled to cover, and anchored so the near grass lands
+     just above the line the sheep walk on — if the horizon sits below their
+     hooves they look like they are floating over the field. */
+  var bgBox = null;
+  function placeBg() {
+    var s = Math.max(W / bg.width, H / bg.height);
+    if (W === NARROW) s *= 1.25;          // a phone gets less field, so zoom in
+    var dw = bg.width * s, dh = bg.height * s;
+    var dx = (W - dw) / 2;
+    var dy = GROUND * 0.86 - 0.72 * bg.height * s;
+    // Never leave a strip of empty canvas at the top or the bottom.
+    dy = Math.min(0, Math.max(H - dh, dy));
+    bgBox = [dx, dy, dw, dh];
+  }
+
+  /* ── sound ───────────────────────────────────────────────
+     Off by default, and the files are not fetched until somebody asks for it.
+     A game about falling asleep that makes a noise at somebody wearing
+     headphones at 2am has done the opposite of its job, and a page that
+     downloads half a megabyte of audio nobody will hear is just rude.
+
+     Two files. The effects are one WAV holding all seven blips end to end:
+     WAV has no encoder padding, so an offset into the decoded buffer is
+     sample-exact, and a sound that answers a tap cannot afford to be 20ms
+     late. The ambience is an mp3, where that padding is harmless because it
+     lands inside the fade the loop crosses over. */
+  var SOUND_KEY = 'lucid_sheep_sound';
+  var SFX = {"jump":[0,0.36],"count":[0.38,0.24],"wolf":[0.64,0.5],"miss":[1.16,0.250023],"streak":[1.430023,0.38],"milestone":[1.830023,0.52],"step":[2.370023,0.189977]};
+  var AMB_OVERLAP = 1.5;          // must match the fade baked into the file
+
+  var sndBtn = document.getElementById('snd');
+  var au = { on: false, ctx: null, bus: null, ambBus: null, sfx: null, amb: null,
+             loading: false, next: 0, live: [], last: {} };
+
+  function soundWanted() { try { return localStorage.getItem(SOUND_KEY) === '1'; } catch (e) { return false; } }
+  function rememberSound(v) { try { localStorage.setItem(SOUND_KEY, v ? '1' : '0'); } catch (e) {} }
+
+  function grab(url) { return fetch(url).then(function (r) { return r.arrayBuffer(); }); }
+
+  function boot() {
+    // Must be called from inside a real gesture or the context starts
+    // suspended and nothing is ever heard.
+    if (!au.ctx) {
+      var AC = window.AudioContext || window.webkitAudioContext;
+      if (!AC) return;
+      au.ctx = new AC();
+      au.bus = au.ctx.createGain();    au.bus.gain.value = 0.9;
+      au.ambBus = au.ctx.createGain(); au.ambBus.gain.value = 0.0;
+      au.bus.connect(au.ctx.destination);
+      au.ambBus.connect(au.ctx.destination);
+    }
+    if (au.ctx.state === 'suspended') au.ctx.resume();
+    if (au.sfx || au.loading) { ambience(); return; }
+    au.loading = true;
+    Promise.all([grab('img/sheep-sfx.wav'), grab('img/sheep-night.mp3')])
+      .then(function (b) {
+        return Promise.all([
+          au.ctx.decodeAudioData(b[0]),
+          au.ctx.decodeAudioData(b[1])
+        ]);
+      })
+      .then(function (d) { au.sfx = d[0]; au.amb = d[1]; ambience(); })
+      .catch(function () { au.loading = false; });     // silence is a fine failure
+  }
+
+  /* One throttle table for everything. Several sheep can jump within a few
+     frames of each other and the same blip fired four times in 80ms is a
+     rattle, not four sheep. */
+  function play(name, gain, minGap) {
+    if (!au.on || !au.sfx) return;
+    var now = au.ctx.currentTime;
+    if (minGap && au.last[name] && now - au.last[name] < minGap) return;
+    au.last[name] = now;
+    var at = SFX[name];
+    var s = au.ctx.createBufferSource();
+    var g = au.ctx.createGain();
+    g.gain.value = gain === undefined ? 1 : gain;
+    s.buffer = au.sfx;
+    s.connect(g); g.connect(au.bus);
+    s.start(now, at[0], at[1]);
+  }
+
+  /* The loop is two overlapping copies rather than a looping buffer. The file
+     already fades in and out over 1.5s with an equal-power curve, so starting
+     the next copy 1.5s before this one ends IS the crossfade — no seam, and
+     no dependence on where the decoder decided the audio begins. */
+  function ambience() {
+    if (!au.on || !au.amb) return;
+    au.ambBus.gain.setTargetAtTime(0.55, au.ctx.currentTime, 1.2);
+    pump();
+  }
+
+  function pump() {
+    if (!au.on || !au.amb) return;
+    var t = au.ctx.currentTime;
+    var step = au.amb.duration - AMB_OVERLAP;
+    if (au.next < t + 0.15) au.next = t + 0.15;
+    while (au.next < t + 12) {
+      var s = au.ctx.createBufferSource();
+      s.buffer = au.amb;
+      s.connect(au.ambBus);
+      s.start(au.next);
+      au.live.push(s);
+      au.next += step;
+    }
+    au.live = au.live.filter(function (s) { return s.buffer; });
+  }
+
+  function hush() {
+    if (!au.ctx) return;
+    au.ambBus.gain.setTargetAtTime(0, au.ctx.currentTime, 0.4);
+    var dead = au.live;
+    au.live = []; au.next = 0;
+    setTimeout(function () {
+      dead.forEach(function (s) { try { s.stop(); } catch (e) {} });
+    }, 1400);
+  }
+
+  function setSound(on) {
+    au.on = on;
+    sndBtn.setAttribute('aria-pressed', on ? 'true' : 'false');
+    sndBtn.setAttribute('aria-label', on ? 'Turn sound off' : 'Turn sound on');
+    rememberSound(on);
+    if (on) boot(); else hush();
+  }
+
+  sndBtn.addEventListener('click', function () { setSound(!au.on); });
+
+  // Somebody who turned sound on last visit gets the button lit, but no
+  // browser will start audio without a gesture — so the first touch anywhere
+  // on the page is what actually opens the context.
+  if (soundWanted()) {
+    au.on = true;
+    sndBtn.setAttribute('aria-pressed', 'true');
+    sndBtn.setAttribute('aria-label', 'Turn sound off');
+    var wake = function () {
+      document.removeEventListener('pointerdown', wake, true);
+      document.removeEventListener('keydown', wake, true);
+      if (au.on) boot();
+    };
+    document.addEventListener('pointerdown', wake, true);
+    document.addEventListener('keydown', wake, true);
+  }
+
+  var ambCheck = 0;               // last time the ambience queue was topped up
+
+  var state = 'idle';             // idle | playing | over
+  var sheep = [], marks = [];
+  var counted = 0, lives = 3, spawnAt = 0, nextId = 1, last = 0, streak = 0;
+
+  /* Scenery. Fixed once so the field is the same field every round — a farm
+     that rearranges itself between goes reads as a glitch, not as variety. */
+  var PROPS = [
+    ['prop2', 0.05, 1.00], ['prop0', 0.17, 0.92], ['prop5', 0.24, 1.05],
+    ['prop4', 0.66, 0.82], ['prop1', 0.80, 0.92], ['prop3', 0.93, 0.88]
+  ];
+  var ISLES = [
+    { k: 'isle0', x: 0.18, y: 0.16, s: 0.62, v: 0.0045, a: 0.5 },
+    { k: 'isle2', x: 0.70, y: 0.10, s: 0.52, v: 0.0030, a: 0.42 }
+  ];
+  var CLOUDS = [
+    { k: 'cloud1', x: 0.30, y: 0.30, s: 0.9, v: 0.011, a: 0.3 },
+    { k: 'cloud3', x: 0.86, y: 0.24, s: 0.8, v: 0.008, a: 0.26 }
+  ];
+
+  /* Quiet lines that drift across the field as the count climbs. They are the
+     only place the game speaks, and they get sleepier, because that is the
+     direction the whole thing is meant to go. */
+  var MURMURS = [
+    [10, 'Your eyes are getting heavier.'],
+    [25, 'The fence is further away than it was.'],
+    [45, 'You have stopped hearing the road outside.'],
+    [70, 'Not all of these are sheep.'],
+    [100, 'You are nearly under.'],
+    [150, 'You should have been asleep a long time ago.']
+  ];
+  var saidUpTo = -1;
+
+  function speed()  { return (2.4 + Math.min(counted * 0.035, 3.4)) * PACE; }
+  function gap()    { return Math.max(560, 1500 - counted * 22); }
+  function wolfChance()  { return Math.min(0.06 + counted * 0.006, 0.26); }
+
+  function reset() {
+    sheep = []; marks = [];
+    counted = 0; lives = 3; spawnAt = 0; saidUpTo = -1; streak = 0;
+    countEl.textContent = '0';
+    capEl.textContent = 'sheep counted';
+    murmurEl.className = 'murmur';
+    paintLives();
+  }
+
+  function paintLives() {
+    var m = livesEl.children;
+    for (var i = 0; i < m.length; i++) m[i].className = i < lives ? 'moon' : 'moon gone';
+  }
+
+  function spawn() {
+    var wolf = Math.random() < wolfChance();
+    sheep.push({
+      id: nextId++,
+      x: W + 90,
+      y: GROUND,
+      lift: 0,
+      wolf: wolf,
+      // A black sheep is a sheep. It is here so that colour alone is never the
+      // answer — what marks a wolf is its face, and one flock of identical
+      // white bodies lets you win without ever looking at one.
+      kind: wolf ? 'f' : (Math.random() < 0.22 ? 'b' : 'w'),
+      counted: false,
+      leapt: false,                  // so the jump sound fires once, not per frame
+      step: 0,                       // which half of the run cycle the hooves are on
+      wobble: Math.random() * Math.PI * 2,
+      v: speed() * (0.92 + Math.random() * 0.2)
+    });
+  }
+
+  function bump() {
+    countEl.classList.add('bump');
+    setTimeout(function () { countEl.classList.remove('bump'); }, 120);
+  }
+
+  function lapse(why) {
+    lives--;
+    streak = 0;                      // a lapse is what a streak is a streak of not doing
+    paintLives();
+    capEl.textContent = why;
+    if (lives <= 0) end();
+  }
+
+  function say(text) {
+    murmurEl.textContent = text;
+    murmurEl.className = 'murmur on';
+    setTimeout(function () { murmurEl.className = 'murmur'; }, 3400);
+  }
+
+  function end() {
+    state = 'over';
+    var ms = Math.round(performance.now() - roundStart);
+    // Asked before the score is filed, or every round beats itself.
+    var beat = counted > 0 && counted > myBestNumber();
+
+    signEl.hidden = true;
+    vh.textContent = counted === 0
+      ? 'You did not count a single one.'
+      : 'You counted ' + counted + '.';
+    vp.textContent = counted === 0
+      ? 'They all went over while you watched.'
+      : counted < 15
+        ? 'Then you lost the thread, which is rather the point of counting sheep.'
+        : counted < 40
+          ? 'Long enough that most people would have drifted off somewhere in there.'
+          : 'That is a lot of sheep to hold on to. You may be more awake than you want to be.';
+    vs.textContent = beat
+      ? 'Your best yet. Whatever you dream tonight, write it down before it goes.'
+      : 'Whatever you dream tonight, write it down before it goes.';
+    vrules.hidden = true;
+    giveEl.hidden = false;
+    goBtn.textContent = 'Again';
+    veil.hidden = false;
+
+    submit(counted, ms);
+  }
+
+  function start() {
+    if (broken) { location.reload(); return; }
+    reset();
+    vrules.hidden = false;
+    giveEl.hidden = true;
+    veil.hidden = true;
+    state = 'playing';
+    last = performance.now();
+    roundStart = last;
+    spawnAt = last + 500;
+  }
+
+  /* ── drawing ─────────────────────────────────────────── */
+
+  /* Which frame an animal is on is read off the arc, not off a timer. On the
+     ground it is the run cycle, stepped by distance travelled so the legs keep
+     up with however fast it is going. In the air it is rise, then airborne,
+     then land, chosen by where it is relative to the fence — so the apex frame
+     is always the one over the rails. */
+  function frameFor(s) {
+    var d = FENCE_X - s.x;
+    // Standing still, the idle frames are the right ones — a run cycle on a
+    // stationary sheep looks like it is treading water.
+    if (s.v === 0 && s.lift < 4) return s.kind + 'i' + (Math.floor(s.wobble) % 4);
+    if (s.lift < 4) return s.kind + 'r' + (Math.floor(s.wobble) % 4);
+    if (d < -SPAN * 0.42) return s.kind + 'j0';
+    if (d < SPAN * 0.42)  return s.kind + 'j1';
+    return s.kind + 'j2';
+  }
+
+  /* The field is 1480 wide and arrives on a laptop about 760 CSS pixels across,
+     so everything in it is shown at roughly half size. A sheep drawn at its
+     native 90px would land at 45 on screen, which is too small to read a face
+     on — and reading the face is the entire game. */
+  var SCALE = 1.4;
+
+  function drawSheep(s) {
+    var d = FENCE_X - s.x;
+    // Nose up on the way over, nose down on the way down. Small — the art is
+    // already drawn mid-leap and a big rotation makes it spin.
+    var tilt = s.lift > 4 ? Math.max(-1, Math.min(1, d / SPAN)) * 0.18 : 0;
+
+    // A shadow on the grass. Without one a jumping sheep has no height — it
+    // just gets higher up the picture, which reads as further away.
+    var fade = 1 - s.lift / HEIGHT;
+    ctx.save();
+    ctx.globalAlpha = 0.28 * fade + 0.06;
+    ctx.fillStyle = '#000';
+    ctx.beginPath();
+    ctx.ellipse(s.x, FOOT - 2, 30 * (0.55 + fade * 0.45), 8 * (0.5 + fade * 0.5), 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+
+    draw(frameFor(s), s.x, FOOT - s.lift, SCALE, true, tilt);
+  }
+
+  function frame(now) {
+    var dt = Math.min(48, now - last);
+    last = now;
+
+    ctx.clearRect(0, 0, W, H);
+
+    if (bgBox) {
+      ctx.drawImage(bg, bgBox[0], bgBox[1], bgBox[2], bgBox[3]);
+    } else {
+      ctx.fillStyle = '#0b1430';
+      ctx.fillRect(0, 0, W, H);
+    }
+
+    /* The painting is a bright summer night and the site around it is black.
+       Pulling it down toward Lucid's own dark keeps the game inside the site
+       rather than beside it, and gives the gold numbers something to sit on. */
+    var wash = ctx.createLinearGradient(0, 0, 0, H);
+    wash.addColorStop(0, 'rgba(6,6,16,.62)');
+    wash.addColorStop(0.55, 'rgba(8,8,20,.40)');
+    wash.addColorStop(1, 'rgba(4,4,12,.58)');
+    ctx.fillStyle = wash;
+    ctx.fillRect(0, 0, W, H);
+
+    // The ambience is scheduled a copy at a time, so something has to keep
+    // asking for the next one. Without this the field goes silent 43 seconds
+    // in and never comes back.
+    if (au.on && au.amb && now - ambCheck > 4000) { ambCheck = now; pump(); }
+
+    var drift = calm ? 0 : now;
+
+    // Islands and clouds move against the still painting, which is the only
+    // thing telling you this is a dream and not a photograph of a farm.
+    ISLES.forEach(function (o) {
+      var x = ((o.x * W - drift * o.v) % (W + 400) + W + 400) % (W + 400) - 200;
+      draw(o.k, x, o.y * H + FRAMES[o.k][3] * o.s / 2, o.s, false, 0, o.a);
+    });
+    CLOUDS.forEach(function (o) {
+      var x = ((o.x * W - drift * o.v) % (W + 500) + W + 500) % (W + 500) - 250;
+      draw(o.k, x, o.y * H + FRAMES[o.k][3] * o.s / 2, o.s, false, 0, o.a);
+    });
+
+    // Scenery sits on the same line the sheep do, behind them.
+    PROPS.forEach(function (p) {
+      draw(p[0], p[1] * W, FOOT + 4, p[2] * 0.9, false, 0, 0.92);
+    });
+
+    // The fence they jump. Drawn to the height the arc already assumed, so the
+    // apex clears the rails by the same margin it always did.
+    // Tall enough to be a fence a sheep has to clear, short enough that the
+    // ends of the arc still pass over the rails rather than through them: at
+    // the edge of the jump window the arc is only about 97 above the ground,
+    // and half the fence's own width out from its middle.
+    var fh = (FENCE_TOP + 54);
+    var fs = fh / FRAMES.fence[3];
+    draw('fence', FENCE_X, FOOT + 6, fs, false, 0, 1);
+
+    if (state === 'playing') {
+      if (now > spawnAt) { spawn(); spawnAt = now + gap(); }
+
+      for (var i = sheep.length - 1; i >= 0; i--) {
+        var s = sheep[i];
+        var moved = s.v * (dt / 16.7);
+        s.x -= moved;
+        // Stepped by distance, so the legs match the speed at every size.
+        s.wobble += moved * 0.055;
+        s.lift = liftAt(s.x);
+
+        if (!s.leapt && s.lift > 6) { s.leapt = true; play('jump', 0.55, 0.10); }
+
+        // Hooves, tied to the run cycle rather than a timer, so the sound
+        // lands on the legs. Only the animal nearest the fence gets them —
+        // four sets of footsteps at once is a stampede, not a flock.
+        if (s.lift < 4 && s.v > 0) {
+          var half = Math.floor(s.wobble / 2);
+          if (half !== s.step) {
+            s.step = half;
+            if (Math.abs(s.x - FENCE_X) < SPAN * 1.6) play('step', 0.30, 0.16);
+          }
+        }
+
+        if (s.x < -110) {
+          if (!s.wolf && !s.counted) lapse('one got past you');
+          sheep.splice(i, 1);
+        }
+      }
+
+      var due = null;
+      for (var m = 0; m < MURMURS.length; m++) {
+        if (counted >= MURMURS[m][0] && MURMURS[m][0] > saidUpTo) due = MURMURS[m];
+      }
+      if (due) { saidUpTo = due[0]; say(due[1]); }
+    }
+
+    sheep.forEach(drawSheep);
+
+    // the numbers that float up when you count one
+    for (var k = marks.length - 1; k >= 0; k--) {
+      var mk = marks[k];
+      mk.life -= dt / 1000;
+      if (mk.life <= 0) { marks.splice(k, 1); continue; }
+      mk.y -= dt * 0.05;
+      ctx.globalAlpha = Math.max(0, Math.min(1, mk.life * 1.6));
+      ctx.font = '600 40px "Secret Typewriter", "Courier New", monospace';
+      ctx.textAlign = 'center';
+      // The count now lands on a lit field instead of a black one, so it gets
+      // its own dark edge rather than relying on the background to be dark.
+      ctx.lineWidth = 6;
+      ctx.strokeStyle = 'rgba(0,0,0,.72)';
+      ctx.strokeText(mk.text, mk.x, mk.y);
+      ctx.fillStyle = mk.bad ? '#e07070' : '#f0cd86';
+      ctx.fillText(mk.text, mk.x, mk.y);
+      ctx.globalAlpha = 1;
+    }
+
+    requestAnimationFrame(frame);
+  }
+
+  /* ── counting ────────────────────────────────────────── */
+
+  function hit(px, py) {
+    if (state !== 'playing') return;
+    // Nearest sheep within reach, so a slightly-off tap on a phone still lands.
+    // Only while it is off the ground. A sheep standing in the field is not
+    // being counted yet — you count it as it goes over.
+    var best = null, bestD = 999;
+    sheep.forEach(function (s) {
+      if (s.lift < 30) return;
+      var f = FRAMES[frameFor(s)];
+      var cy = FOOT - s.lift - f[3] * SCALE / 2;
+      var dx = s.x - px, dy = cy - py;
+      var d = Math.sqrt(dx * dx + dy * dy);
+      if (d < 66 && d < bestD) { best = s; bestD = d; }
+    });
+    /* Tapping a sheep that has not jumped yet.
+       Not a penalty — it never has been — but it is the one rule people get
+       wrong, and a sound that says "you found it, you were early" teaches it
+       in a way the paragraph on the panel does not.
+
+       It deliberately does NOT fire on a tap at open grass. Someone hunting
+       around the field would otherwise get a noise on every stab, which is
+       nagging rather than teaching. You have to have actually hit an animal. */
+    if (!best) {
+      var early = null, ed = 999;
+      sheep.forEach(function (s) {
+        if (s.lift >= 30 || s.v === 0) return;
+        var f = FRAMES[frameFor(s)];
+        var dx = s.x - px, dy = (FOOT - s.lift - f[3] * SCALE / 2) - py;
+        var d = Math.sqrt(dx * dx + dy * dy);
+        if (d < 66 && d < ed) { early = s; ed = d; }
+      });
+      if (early) play('miss', 0.5, 0.35);
+      return;
+    }
+
+    var fy = FOOT - best.lift - FRAMES[frameFor(best)][3] * SCALE;
+
+    if (best.wolf) {
+      marks.push({ x: best.x, y: fy - 8, text: '✕', life: 0.9, bad: true });
+      best.counted = true;                       // so it cannot cost twice
+      play('wolf', 0.85);
+      lapse('that one was a wolf');
+      return;
+    }
+    if (best.counted) return;
+
+    best.counted = true;
+    counted++;
+    streak++;
+    countEl.textContent = counted;
+    capEl.textContent = 'sheep counted';
+    marks.push({ x: best.x, y: fy - 8, text: String(counted), life: 0.9, bad: false });
+    bump();
+
+    /* One sound, not three. A milestone beats a streak beats a plain count —
+       two rewards arriving together reads as a bug rather than as twice the
+       reward. The milestones are the murmur thresholds, so the line that
+       drifts across the field and the sound that marks it are the same
+       moment rather than two competing ones. */
+    var big = false;
+    for (var q = 0; q < MURMURS.length; q++) if (counted === MURMURS[q][0]) big = true;
+    if (big)                   play('milestone', 0.9);
+    else if (streak % 10 === 0) play('streak', 0.8);
+    else                        play('count', 0.75);
+  }
+
+  function pointAt(ev) {
+    var r = cv.getBoundingClientRect();
+    var t = ev.changedTouches ? ev.changedTouches[0] : ev;
+    return { x: (t.clientX - r.left) * (W / r.width), y: (t.clientY - r.top) * (H / r.height) };
+  }
+
+  cv.addEventListener('pointerdown', function (ev) {
+    ev.preventDefault();
+    var p = pointAt(ev);
+    hit(p.x, p.y);
+  });
+
+  goBtn.addEventListener('click', start);
+
+  // A few animals standing about before you begin, so the field is not empty
+  // and the difference between a sheep's face and a wolf's is on screen before
+  // it costs anybody anything.
+  sheep.push({ id: 0, x: W * 0.72, y: GROUND, lift: 0, wolf: false, kind: 'w', counted: true, wobble: 0.4, v: 0 });
+  sheep.push({ id: 0, x: W * 0.86, y: GROUND, lift: 0, wolf: false, kind: 'b', counted: true, wobble: 2.1, v: 0 });
+  sheep.push({ id: 0, x: W * 0.22, y: GROUND, lift: 0, wolf: true,  kind: 'f', counted: true, wobble: 3.4, v: 0 });
+
+  paintLives();
+  paintBests();
+  paintBoard();
+  loadBoard();
+  last = performance.now();
+  requestAnimationFrame(frame);
+})();
+</script>
