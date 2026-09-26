@@ -199,7 +199,25 @@ mark{background:rgba(212,175,106,.26);color:var(--lunar);border-radius:2px;paddi
 .handle{font-size:13px;font-weight:500;color:var(--lunar);background:none;border:none;padding:0;cursor:pointer;font-family:var(--sans);transition:color .2s}
 .handle:hover{color:var(--pulse)}
 .when{font-size:11px;color:var(--glow);letter-spacing:.08em;text-transform:uppercase}
-.post-body{font-family:var(--type);font-size:18px;font-weight:400;line-height:1.72;color:#ded8ec;white-space:pre-wrap;word-break:break-word}
+.post-body{font-family:var(--sans);font-size:17px;font-weight:300;line-height:1.7;color:#fff;white-space:pre-wrap;word-break:break-word}
+/* answers to a dream */
+.ansbar{display:flex;align-items:center;gap:14px;margin-top:10px}
+.ansbtn{background:none;border:none;color:var(--glow);font-family:var(--sans);font-size:12.5px;cursor:pointer;padding:4px 0}
+.ansbtn:hover{color:var(--pulse)}
+.answers{margin-top:13px;border-left:1px solid var(--edge);padding-left:16px;display:flex;flex-direction:column;gap:15px}
+.ans{display:flex;flex-direction:column;gap:5px}
+.ans-head{display:flex;align-items:baseline;gap:9px;flex-wrap:wrap}
+.ans-who{font-family:var(--sans);font-size:13px;color:var(--dream);background:none;border:none;padding:0;cursor:pointer}
+.ans-who:hover{color:var(--pulse)}
+.ans-when{font-size:11px;color:var(--glow)}
+.ans-act{font-family:var(--sans);font-size:11px;color:var(--glow);background:none;border:none;padding:0;cursor:pointer}
+.ans-act:hover{color:var(--pulse)}
+.ans-body{font-family:var(--sans);font-size:15px;font-weight:300;line-height:1.65;color:#fff;white-space:pre-wrap;word-break:break-word}
+.ans-none{font-size:13px;color:var(--glow);line-height:1.6}
+.ans-write{display:flex;flex-direction:column;gap:9px}
+.ans-write textarea{min-height:62px;font-size:15px;line-height:1.6;resize:vertical;color:#fff}
+.ans-row{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.ans-count{font-family:var(--type);font-size:11px;color:var(--glow)}
 .mine .handle{color:var(--gold)}
 .del{font-size:10px;letter-spacing:.14em;text-transform:uppercase;background:none;border:none;color:#4a4470;cursor:pointer;padding:0;font-family:var(--sans);transition:color .2s}
 .del:hover{color:var(--error)}
@@ -632,6 +650,14 @@ var query = '', searchFocus = false;
  */
 var composerOpen = false, composerDraft = '', composerFocus = false;
 
+/* ── answers ──────────────────────────────
+   openAnswers holds which dreams currently have their answers showing.
+   answersBy caches what came back for each one. answerDrafts keeps what is
+   half-typed, outside the DOM — the same reason composerDraft exists: the
+   page re-renders on every keystroke elsewhere, and a draft living only in a
+   textarea would be wiped by the first re-render that happened to run. */
+var openAnswers = {}, answersBy = {}, answerDrafts = {};
+
 /* Every word has to appear somewhere in the dream, or in who wrote it.
    This filters what is displayed. It does not touch the database, and it
    does not ask the server for anything — the posts are already here. */
@@ -749,6 +775,78 @@ function reactBar(p){
   });
   return h + '</div>';
 }
+/* The answers under one dream.
+
+   Collapsed by default. A feed of three hundred dreams each showing five
+   answers is not a feed any more, it is a wall — and the dream is the thing
+   people came for. The count sits on the button so you can tell there is
+   something to open without opening it. */
+function answersHTML(p){
+  var n = p.comments || 0;
+  var open = !!openAnswers[p.id];
+  var label = open ? 'Hide answers'
+            : n ? (n === 1 ? '1 answer' : n + ' answers')
+            : (me ? 'Answer' : '');
+  var h = label ? '<div class="ansbar"><button class="ansbtn" data-ans="' + p.id + '">'
+                  + label + '</button></div>' : '';
+  if (!open) return h;
+
+  var got = answersBy[p.id];
+  h += '<div class="answers">';
+  if (!got){
+    h += '<p class="ans-none">Reading&hellip;</p>';
+  } else if (!got.list.length){
+    h += '<p class="ans-none">No answers yet.</p>';
+  } else {
+    got.list.forEach(function(c){
+      // Two people can remove an answer: whoever wrote it, and whoever the
+      // dream belongs to. The server checks this again; this only decides
+      // whether the button is worth showing.
+      var canRemove = c.mine || got.dreamer;
+      h += '<div class="ans"><div class="ans-head">'
+        + '<button class="ans-who" data-go="' + esc(c.handle) + '">' + esc(c.handle) + '</button>'
+        + '<span class="ans-when">' + esc(when(c.created_at)) + '</span>'
+        + (canRemove ? '<button class="ans-act" data-adel="' + c.id + ':' + p.id + '">remove</button>' : '')
+        + (me && !c.mine ? '<button class="ans-act" data-arep="' + c.id + '">report</button>' : '')
+        + (me && !c.mine ? '<button class="ans-act" data-ablock="' + esc(c.handle) + '">block</button>' : '')
+        + '</div><div class="ans-body">' + esc(c.body) + '</div></div>';
+    });
+  }
+
+  if (me){
+    var d = answerDrafts[p.id] || '';
+    var len = d.trim().length;
+    h += '<div class="ans-write">'
+      + '<textarea data-adraft="' + p.id + '" maxlength="400" '
+      + 'placeholder="Say it plainly. A line is enough.">' + esc(d) + '</textarea>'
+      + '<div class="ans-row"><span class="ans-count">' + (len ? len + ' / 400' : '') + '</span>'
+      + '<button class="ghost" data-asend="' + p.id + '"' + (len ? '' : ' disabled') + '>Post answer</button>'
+      + '</div></div>';
+  } else {
+    h += '<p class="ans-none">You are reading. To answer, you need a name here.</p>';
+  }
+  return h + '</div>';
+}
+
+function loadAnswers(id){
+  return api('/api/posts/' + id + '/comments')
+    .then(function(d){
+      answersBy[id] = { list: d.comments || [], dreamer: !!d.dreamer };
+      render();
+    })
+    .catch(function(err){ flash = { t:'err', m: err.message }; render(); });
+}
+
+/* Keep the count on the dream honest after an answer is added or removed,
+   rather than refetching the whole feed to change one number. */
+function bumpAnswerCount(id, by){
+  for (var i = 0; i < cache.posts.length; i++){
+    if (String(cache.posts[i].id) === String(id)){
+      cache.posts[i].comments = Math.max(0, (cache.posts[i].comments || 0) + by);
+    }
+  }
+}
+
 function flashHTML(){
   if (!flash) return '';
   var h = '<div class="msg '+flash.t+'">'+esc(flash.m)+'</div>';
@@ -1173,11 +1271,52 @@ var REPORT_REASONS = [
   ['other',   'Something else']
 ];
 
-function openReport(postId){
+/* Blocking somebody. The wording is the whole feature: people reach for a
+   block believing it makes them invisible, and this one does not. Saying so
+   here is cheaper than somebody finding out the hard way. */
+function openBlock(handle){
   var el = openSheet(
-    '<h3>Report this dream.</h3>'
-    + '<p class="sheet-small">This goes to whoever looks after Lucid. Nothing happens to the '
-    + 'post automatically, and the person who wrote it is not told who reported it.</p>'
+    '<h3>Block ' + esc(handle) + '?</h3>'
+    + '<p class="sheet-small">Their answers stop appearing for you, and they will not be able to '
+    + 'answer your dreams. They are not told, and they are not named to anyone.</p>'
+    + '<p class="sheet-small">It does not hide your dreams from them. The feed is public, so a '
+    + 'signed-out browser reads it either way — and a promise that only holds while somebody '
+    + 'stays logged in is worse than no promise.</p>'
+    + '<div class="sheet-row"><button class="ghost" id="blkCancel">Not now</button>'
+    + '<button class="btn" id="blkDo">Block</button></div>'
+    + '<p class="sheet-err" id="blkErr"></p>'
+  );
+  el.querySelector('#blkCancel').onclick = closeSheet;
+  el.querySelector('#blkDo').onclick = function(){
+    var btn = el.querySelector('#blkDo');
+    btn.disabled = true; btn.textContent = 'Blocking';
+    api('/api/blocks', { method:'POST', body:{ handle: handle }})
+      .then(function(){
+        closeSheet();
+        // Their answers are gone from every dream now, not just this one, so
+        // the cache has to go rather than be patched in one place.
+        answersBy = {};
+        flash = { t:'ok', m: 'Blocked ' + handle + '.' };
+        loadFeed();
+      })
+      .catch(function(err){
+        btn.disabled = false; btn.textContent = 'Block';
+        el.querySelector('#blkErr').textContent = err.message === 'offline'
+          ? 'That did not send. Try again in a moment.' : err.message;
+      });
+  };
+}
+
+/* One sheet for both. kind is 'dream' or 'answer' — the wording and the
+   endpoint change, everything else is identical, and two near-identical
+   sheets is how the wording on one of them slowly goes stale. */
+function openReport(id, kind){
+  kind = kind || 'dream';
+  var isAnswer = kind === 'answer';
+  var el = openSheet(
+    '<h3>Report this ' + (isAnswer ? 'answer' : 'dream') + '.</h3>'
+    + '<p class="sheet-small">This goes to whoever looks after Lucid. Nothing happens to it '
+    + 'automatically, and the person who wrote it is not told who reported it.</p>'
     + '<div class="reasons">' + REPORT_REASONS.map(function(r, i){
         return '<label class="reason"><input type="radio" name="rr" value="' + r[0] + '"'
              + (i === 0 ? ' checked' : '') + '><span>' + r[1] + '</span></label>';
@@ -1196,7 +1335,8 @@ function openReport(postId){
     var note = el.querySelector('#repNote').value;
     btn.disabled = true; btn.textContent = 'Sending';
 
-    api('/api/posts/' + postId + '/report', { method:'POST', body:{ reason:reason, note:note }})
+    api((isAnswer ? '/api/comments/' : '/api/posts/') + id + '/report',
+        { method:'POST', body:{ reason:reason, note:note }})
       .then(function(d){
         var box = el.querySelector('.sheet-box');
         box.innerHTML = '<h3>Thank you.</h3>'
@@ -1880,11 +2020,11 @@ function feedView(){
         + (own ? '<button class="del" data-del="' + p.id + '">delete</button>' : '')
         + (!own && me ? '<button class="rep" data-rep="' + p.id + '" title="Report this dream">report</button>' : '')
         + '</div><div class="post-body">' + highlight(p.body, query) + '</div>'
-        + reactBar(p) + '</div></article>';
+        + reactBar(p) + answersHTML(p) + '</div></article>';
     });
     h += '</div>';
   }
-  h += '<p class="footnote">Dreams are kept on a machine that belongs to Lucid, not to anyone else. No comments, by design.</p>';
+  h += '<p class="footnote">Dreams are kept on a machine that belongs to Lucid, not to anyone else.</p>';
   return h;
 }
 
@@ -1938,7 +2078,7 @@ function profileView(){
         + '<div><div class="post-head"><span class="when">' + esc(when(x.created_at)) + '</span>'
         + (own ? '<button class="del" data-del="' + x.id + '">delete</button>' : '')
         + '</div><div class="post-body">' + esc(x.body) + '</div>'
-        + reactBar(x) + '</div></article>';
+        + reactBar(x) + answersHTML(x) + '</div></article>';
     });
     h += '</div>';
   }
@@ -2260,6 +2400,76 @@ function wire(){
 
   Array.prototype.forEach.call(document.querySelectorAll('[data-rep]'), function(b){
     b.onclick = function(){ openReport(b.getAttribute('data-rep')); };
+  });
+
+  /* ── answers ── */
+  Array.prototype.forEach.call(document.querySelectorAll('[data-ans]'), function(b){
+    b.onclick = function(){
+      var id = b.getAttribute('data-ans');
+      if (openAnswers[id]){ delete openAnswers[id]; render(); return; }
+      openAnswers[id] = true;
+      // Cached from last time is shown straight away and left alone. Answers
+      // are not a chat window; refetching on every open would cost a round
+      // trip to tell somebody nothing had changed.
+      if (answersBy[id]) render(); else { render(); loadAnswers(id); }
+    };
+  });
+
+  Array.prototype.forEach.call(document.querySelectorAll('[data-adraft]'), function(t){
+    var id = t.getAttribute('data-adraft');
+    /* Deliberately no render() on input. The whole page rebuilds on render,
+       which would take the caret with it — the same trap composerDraft was
+       built to avoid. The counter and the button are nudged by hand instead. */
+    t.oninput = function(){
+      answerDrafts[id] = t.value;
+      var n = t.value.trim().length;
+      var wrap = t.parentNode;
+      var count = wrap.querySelector('.ans-count');
+      var send  = wrap.querySelector('[data-asend]');
+      if (count) count.textContent = n ? n + ' / 400' : '';
+      if (send)  send.disabled = !n;
+    };
+  });
+
+  Array.prototype.forEach.call(document.querySelectorAll('[data-asend]'), function(b){
+    b.onclick = function(){
+      var id = b.getAttribute('data-asend');
+      var body = (answerDrafts[id] || '').trim();
+      if (!body) return;
+      b.disabled = true; b.textContent = 'Posting';
+      api('/api/posts/' + id + '/comments', { method:'POST', body:{ body: body }})
+        .then(function(d){
+          answerDrafts[id] = '';
+          var got = answersBy[id] || { list: [], dreamer: false };
+          got.list = got.list.concat([d.comment]);
+          answersBy[id] = got;
+          bumpAnswerCount(id, 1);
+          render();
+          if (d && d.care) showCare();
+        })
+        .catch(function(err){
+          b.disabled = false; b.textContent = 'Post answer';
+          flash = { t:'err', m: err.message }; render();
+        });
+    };
+  });
+
+  Array.prototype.forEach.call(document.querySelectorAll('[data-adel]'), function(b){
+    b.onclick = function(){
+      var parts = b.getAttribute('data-adel').split(':');
+      b.textContent = 'removing';
+      api('/api/comments/' + parts[0], { method:'DELETE' })
+        .then(function(){ bumpAnswerCount(parts[1], -1); loadAnswers(parts[1]); })
+        .catch(function(err){ flash = { t:'err', m: err.message }; render(); });
+    };
+  });
+
+  Array.prototype.forEach.call(document.querySelectorAll('[data-arep]'), function(b){
+    b.onclick = function(){ openReport(b.getAttribute('data-arep'), 'answer'); };
+  });
+
+  Array.prototype.forEach.call(document.querySelectorAll('[data-ablock]'), function(b){
+    b.onclick = function(){ openBlock(b.getAttribute('data-ablock')); };
   });
 
   Array.prototype.forEach.call(document.querySelectorAll('[data-del]'), function(b){
