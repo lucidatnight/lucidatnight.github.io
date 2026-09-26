@@ -784,9 +784,12 @@ function reactBar(p){
 function answersHTML(p){
   var n = p.comments || 0;
   var open = !!openAnswers[p.id];
-  var label = open ? 'Hide answers'
-            : n ? (n === 1 ? '1 answer' : n + ' answers')
-            : (me ? 'Answer' : '');
+  /* "Respond", not "Answer". An answer is a thing you have TO a dream — it
+     invites interpretation, and telling somebody what their dream means is
+     the one thing this place is not for. A response makes no such claim. */
+  var label = open ? 'Hide responses'
+            : n ? (n === 1 ? '1 response' : n + ' responses')
+            : (me ? 'Respond' : '');
   var h = label ? '<div class="ansbar"><button class="ansbtn" data-ans="' + p.id + '">'
                   + label + '</button></div>' : '';
   if (!open) return h;
@@ -796,7 +799,7 @@ function answersHTML(p){
   if (!got){
     h += '<p class="ans-none">Reading&hellip;</p>';
   } else if (!got.list.length){
-    h += '<p class="ans-none">No answers yet.</p>';
+    h += '<p class="ans-none">No responses yet.</p>';
   } else {
     got.list.forEach(function(c){
       // Two people can remove an answer: whoever wrote it, and whoever the
@@ -820,10 +823,10 @@ function answersHTML(p){
       + '<textarea data-adraft="' + p.id + '" maxlength="400" '
       + 'placeholder="Say it plainly. A line is enough.">' + esc(d) + '</textarea>'
       + '<div class="ans-row"><span class="ans-count">' + (len ? len + ' / 400' : '') + '</span>'
-      + '<button class="ghost" data-asend="' + p.id + '"' + (len ? '' : ' disabled') + '>Post answer</button>'
+      + '<button class="ghost" data-asend="' + p.id + '"' + (len ? '' : ' disabled') + '>Post response</button>'
       + '</div></div>';
   } else {
-    h += '<p class="ans-none">You are reading. To answer, you need a name here.</p>';
+    h += '<p class="ans-none">You are reading. To respond, you need a name here.</p>';
   }
   return h + '</div>';
 }
@@ -1277,8 +1280,8 @@ var REPORT_REASONS = [
 function openBlock(handle){
   var el = openSheet(
     '<h3>Block ' + esc(handle) + '?</h3>'
-    + '<p class="sheet-small">Their answers stop appearing for you, and they will not be able to '
-    + 'answer your dreams. They are not told, and they are not named to anyone.</p>'
+    + '<p class="sheet-small">Their responses stop appearing for you, and they will not be able to '
+    + 'respond to your dreams. They are not told, and they are not named to anyone.</p>'
     + '<p class="sheet-small">It does not hide your dreams from them. The feed is public, so a '
     + 'signed-out browser reads it either way — and a promise that only holds while somebody '
     + 'stays logged in is worse than no promise.</p>'
@@ -1314,7 +1317,7 @@ function openReport(id, kind){
   kind = kind || 'dream';
   var isAnswer = kind === 'answer';
   var el = openSheet(
-    '<h3>Report this ' + (isAnswer ? 'answer' : 'dream') + '.</h3>'
+    '<h3>Report this ' + (isAnswer ? 'response' : 'dream') + '.</h3>'
     + '<p class="sheet-small">This goes to whoever looks after Lucid. Nothing happens to it '
     + 'automatically, and the person who wrote it is not told who reported it.</p>'
     + '<div class="reasons">' + REPORT_REASONS.map(function(r, i){
@@ -1966,7 +1969,7 @@ function feedView(){
 
   if (!me){
     h += '<div class="visitor"><p>You are reading. To write a dream of your own, '
-      + 'or to answer someone else\'s, you need a name here.</p>'
+      + 'or to respond to someone else\'s, you need a name here.</p>'
       + '<button class="btn" data-v="landing">Join</button></div>';
   } else {
     if (!composerOpen){
@@ -2024,7 +2027,8 @@ function feedView(){
     });
     h += '</div>';
   }
-  h += '<p class="footnote">Dreams are kept on a machine that belongs to Lucid, not to anyone else.</p>';
+  h += '<p class="footnote">Dreams are kept on a machine that belongs to Lucid, not to anyone else. '
+     + '<a class="footlink" href="privacy.html">What is kept, and what is not</a>.</p>';
   return h;
 }
 
@@ -2448,7 +2452,7 @@ function wire(){
           if (d && d.care) showCare();
         })
         .catch(function(err){
-          b.disabled = false; b.textContent = 'Post answer';
+          b.disabled = false; b.textContent = 'Post response';
           flash = { t:'err', m: err.message }; render();
         });
     };
