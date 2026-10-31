@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Lucid — what should we email you?</title>
+<meta name="robots" content="noindex, nofollow">
+<meta name="referrer" content="no-referrer">
+<meta name="theme-color" content="#000000">
+<link rel="icon" type="image/png" sizes="192x192" href="/icon-192.png">
+<!--
+  The page the one email points at.
+
+  THE TOKEN IS IN THE FRAGMENT, after the #. That is the whole privacy design
+  of this page and it is worth saying why. A fragment is the one part of a URL
+  a browser never sends anywhere: not to this site, not in a Referer header to
+  the next site, not to a proxy, not into a server log. The link in the email
+  is read by JavaScript on this page and goes straight to the API over POST.
+  If the token were a path — /email/7f3a... — then GitHub, every CDN in front
+  of it, and every corporate middlebox between the person and here would have
+  a copy of it in a log file, and so would the next site they visited.
+
+  NOTHING HAPPENS UNTIL A BUTTON IS PRESSED. Gmail, Outlook and Apple Mail all
+  fetch the links in a message before a human has seen it, to scan them for
+  malware and to build a preview. A page that recorded an answer on load would
+  collect three hundred answers nobody gave.
+
+  THERE IS NO TRACKING PIXEL in the email that brought somebody here, and no
+  analytics on this page. Whether the mail was opened is not something Lucid
+  needs to know, and the only honest measure of whether it worked is how many
+  people answered it.
+-->
+<style>
+:root{
+  --night:#000; --deep:#070709; --void:#0e0e18; --mist:#191926;
+  --lunar:#e8e4f0; --dream:#a89bc8; --glow:#7b6fa8; --pulse:#c4b5e8;
+  --gold:#d4af6a; --error:#e07070; --ok:#70b890;
+  --edge:rgba(168,155,200,.16);
+  --type:'Courier New',Courier,monospace;
+  --sans:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'Helvetica Neue',Arial,sans-serif;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html{-webkit-text-size-adjust:100%}
+body{background:var(--night);color:var(--lunar);font-family:var(--sans);font-weight:300;
+     line-height:1.6;min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px 16px}
+#aura{position:fixed;width:900px;height:900px;border-radius:50%;
+      background:radial-gradient(circle,rgba(123,111,168,.13) 0%,transparent 68%);
+      top:-440px;left:50%;transform:translateX(-50%);pointer-events:none;z-index:0}
+main{position:relative;z-index:1;width:100%;max-width:520px}
+.eyebrow{font-size:10px;letter-spacing:.24em;text-transform:uppercase;color:var(--glow);font-weight:500}
+.card{background:var(--deep);border:1px solid var(--edge);border-radius:3px;padding:26px;margin-top:14px}
+h1{font-family:var(--type);font-size:26px;font-weight:400;line-height:1.3;margin-top:10px;text-wrap:balance}
+p{font-size:15px;color:#cfc8de;margin-top:14px}
+p.small{font-size:13px;color:var(--dream)}
+/* min-height, not just padding. The letters here are 11px, and a button's
+   line box does not inherit the page's line-height, so padding alone made
+   this 41 pixels tall — under the 44 a thumb needs, on a page whose entire
+   job is one tap on a phone. */
+.btn{font-family:var(--sans);font-size:11px;font-weight:600;letter-spacing:.18em;text-transform:uppercase;
+     background:var(--dream);color:var(--night);border:none;border-radius:2px;padding:14px 24px;cursor:pointer;
+     transition:background .25s,opacity .25s;width:100%;min-height:48px}
+.btn:hover:not(:disabled){background:var(--pulse)}
+.btn:disabled{opacity:.35;cursor:not-allowed}
+.ghost{font-family:var(--sans);font-size:11px;font-weight:500;letter-spacing:.16em;text-transform:uppercase;
+       background:none;border:1px solid var(--edge);color:var(--dream);border-radius:2px;padding:12px 20px;
+       cursor:pointer;transition:border-color .25s,color .25s;width:100%;margin-top:10px;min-height:48px}
+.ghost:hover:not(:disabled){border-color:var(--glow);color:var(--pulse)}
+.ghost:disabled{opacity:.4;cursor:not-allowed}
+/* A row you can hit anywhere, because half of these arrive on a phone and a
+   14px checkbox is not a target. */
+label.row{display:flex;gap:13px;align-items:flex-start;padding:14px 2px;cursor:pointer;
+          border-top:1px solid var(--edge)}
+label.row:first-of-type{border-top:none}
+label.row input{appearance:none;-webkit-appearance:none;flex:none;width:19px;height:19px;margin-top:2px;
+                border:1px solid var(--glow);border-radius:2px;background:var(--void);cursor:pointer;
+                position:relative;transition:background .2s,border-color .2s}
+label.row input:checked{background:var(--dream);border-color:var(--dream)}
+label.row input:checked::after{content:'';position:absolute;left:5px;top:1px;width:6px;height:11px;
+                border-right:2px solid var(--night);border-bottom:2px solid var(--night);transform:rotate(42deg)}
+label.row input:focus-visible{outline:2px solid var(--pulse);outline-offset:2px}
+.rowtext{font-size:15px;color:var(--lunar)}
+.rowtext em{display:block;font-style:normal;font-size:13px;color:var(--dream);margin-top:2px}
+.msg{font-size:14px;margin-top:16px;min-height:1px}
+.msg.bad{color:var(--error)}
+.msg.good{color:var(--ok)}
+.foot{font-size:12px;color:var(--glow);margin-top:18px;text-align:center}
+.foot a{color:var(--dream)}
+a{color:var(--dream)}
+[hidden]{display:none!important}
+</style>
+</head>
+<body>
+<div id="aura"></div>
+<main>
+  <div class="eyebrow">Lucid at Night</div>
+
+  <!-- waiting -->
+  <section id="loading" class="card">
+    <h1>One moment.</h1>
+    <p class="small">Checking your link.</p>
+  </section>
+
+  <!-- the question -->
+  <section id="ask" class="card" hidden>
+    <h1 id="askTitle">What should Lucid email you?</h1>
+    <p id="askWho" class="small"></p>
+
+    <div style="margin-top:18px">
+      <label class="row">
+        <input type="checkbox" id="cReply" checked>
+        <span class="rowtext">When somebody answers a dream I wrote
+          <em>One email, when it happens.</em></span>
+      </label>
+      <label class="row">
+        <input type="checkbox" id="cSame" checked>
+        <span class="rowtext">When somebody else dreams the same strange thing I did
+          <em>Rare. It is the whole reason this site exists.</em></span>
+      </label>
+      <label class="row">
+        <input type="checkbox" id="cWeekly">
+        <span class="rowtext">What the feed has been doing
+          <em>Once a week, Sunday. Nothing if it was a quiet week.</em></span>
+      </label>
+    </div>
+
+    <div style="margin-top:20px">
+      <button class="btn" id="save">Save this</button>
+      <button class="ghost" id="none">No — don't email me at all</button>
+    </div>
+    <div class="msg" id="askMsg" role="status" aria-live="polite"></div>
+  </section>
+
+  <!-- done -->
+  <section id="done" class="card" hidden>
+    <h1 id="doneTitle">Done.</h1>
+    <p id="doneBody"></p>
+    <p class="small" id="doneAgain"></p>
+    <div style="margin-top:20px">
+      <a class="btn" href="https://lucidatnight.com/" style="display:block;text-align:center;text-decoration:none;padding:14px 24px">Back to Lucid</a>
+    </div>
+  </section>
+
+  <!-- a link that means nothing -->
+  <section id="bad" class="card" hidden>
+    <h1>That link has stopped working.</h1>
+    <p>Nothing has changed, and you have not been signed up to anything.</p>
+    <p class="small">If you got here from an email and it should have worked, the
+      link may have been cut in half by your mail program — that happens with
+      long ones. Opening it from the email again usually fixes it.</p>
+    <div style="margin-top:20px">
+      <a class="btn" href="https://lucidatnight.com/" style="display:block;text-align:center;text-decoration:none;padding:14px 24px">Back to Lucid</a>
+    </div>
+  </section>
+
+  <div class="foot">Lucid sends nothing you have not asked for.
+    <a href="https://lucidatnight.com/privacy.html">What we keep</a>.</div>
+</main>
+
+<script>
+'use strict';
+var API = 'https://ragnarok.tailb152cd.ts.net';
+
+/* The token, from the fragment. Read once and then taken out of the address
+   bar with replaceState, so it is not sitting in the URL of a page somebody
+   leaves open, and so it does not end up in a screenshot or a shared tab. */
+var token = (location.hash || '').replace(/^#/, '').trim().toLowerCase();
+try { if (token) history.replaceState(null, '', location.pathname); } catch (e) {}
+
+var el = function (id) { return document.getElementById(id); };
+function show(which) {
+  ['loading', 'ask', 'done', 'bad'].forEach(function (k) { el(k).hidden = (k !== which); });
+}
+
+function post(path, body) {
+  return fetch(API + path, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body)
+  }).then(function (r) {
+    return r.json().catch(function () { return {}; }).then(function (d) {
+      if (!r.ok) throw new Error(d.error || 'That did not go through.');
+      return d;
+    });
+  });
+}
+
+if (!/^[a-z0-9]{8,64}$/.test(token)) {
+  show('bad');
+} else {
+  post('/api/email/open', { token: token }).then(function (d) {
+    el('askWho').textContent = 'Signed in here as ' + d.handle + '.' +
+      (d.answered ? ' You have answered this before — these are your settings now.' : '');
+    if (d.answered) {
+      el('askTitle').textContent = 'What should Lucid email you?';
+      el('cReply').checked = d.reply;
+      el('cSame').checked = d.same;
+      el('cWeekly').checked = d.weekly;
+    }
+    show('ask');
+  }).catch(function () { show('bad'); });
+}
+
+function finish(d) {
+  if (d.nothing) {
+    el('doneTitle').textContent = "Then we won't.";
+    el('doneBody').textContent = 'Lucid will not email you. You will not be asked again.';
+    el('doneAgain').textContent = 'If you change your mind, the link in that email still works — ' +
+      'it does not expire, and it always comes back here.';
+  } else {
+    var bits = [];
+    if (d.reply) bits.push('when somebody answers your dream');
+    if (d.same) bits.push('when somebody dreams what you dreamed');
+    if (d.weekly) bits.push('the Sunday summary');
+    el('doneTitle').textContent = 'Saved.';
+    el('doneBody').textContent = "We'll email you " + bits.join(', ') + '. Nothing else.';
+    el('doneAgain').textContent = 'Every one of those emails has a one-tap way back to this page.';
+  }
+  show('done');
+}
+
+/* Both buttons go dead the moment one is pressed. A double tap on a phone
+   should not be able to send a second answer that races the first. */
+function send(body) {
+  el('save').disabled = true;
+  el('none').disabled = true;
+  el('askMsg').className = 'msg';
+  el('askMsg').textContent = 'Saving…';
+  post('/api/email/choose', body).then(finish).catch(function (e) {
+    el('save').disabled = false;
+    el('none').disabled = false;
+    el('askMsg').className = 'msg bad';
+    el('askMsg').textContent = e.message + ' Nothing was changed — try once more.';
+  });
+}
+
+el('save').addEventListener('click', function () {
+  send({
+    token: token,
+    reply: el('cReply').checked,
+    same: el('cSame').checked,
+    weekly: el('cWeekly').checked
+  });
+});
+
+/* "No" is an answer, not a silence, and it is recorded as one — which is why
+   it goes through the same route with all three switched off rather than
+   simply closing the page. A person who was never asked and a person who
+   said no look identical unless the no is written down, and that difference
+   is the only thing stopping us asking them again. */
+el('none').addEventListener('click', function () {
+  send({ token: token, reply: false, same: false, weekly: false });
+});
+</script>
+</body>
+</html>
