@@ -288,6 +288,22 @@ mark{background:rgba(212,175,106,.26);color:var(--lunar);border-radius:2px;paddi
   justify-content:space-between;gap:18px;flex-wrap:wrap;
 }
 .visitor p{font-size:14px;color:var(--dream);line-height:1.65;margin:0}
+/* ── what the donations did ───────────────
+   Three numbers that must never blur into one: GIVEN is what Ko-fi received,
+   OWED is a quarter of it, SENT is what has actually reached a school. The
+   usual version of this card shows the quarter as though it were already
+   food. This one does not. See giving.js. */
+.give{background:var(--deep);border:1px solid var(--edge);border-radius:3px;padding:22px 24px;margin-top:18px}
+.give-eyebrow{font-size:10px;letter-spacing:.24em;text-transform:uppercase;color:var(--glow);font-weight:500}
+.give-big{font-family:var(--type);font-size:26px;line-height:1.25;color:var(--lunar);margin-top:8px;font-variant-numeric:tabular-nums;text-wrap:balance}
+.give-big b{color:var(--gold);font-weight:400}
+.give-line{font-size:14px;color:#cfc8de;margin-top:10px;line-height:1.6}
+.give-work{font-size:12px;color:var(--glow);margin-top:12px;line-height:1.7;font-variant-numeric:tabular-nums}
+.give-work a{color:var(--dream)}
+.give-owed{color:var(--gold)}
+.give-cta{display:inline-block;margin-top:14px;font-size:11px;font-weight:600;letter-spacing:.18em;text-transform:uppercase;color:var(--dream);border:1px solid var(--edge);border-radius:2px;padding:11px 18px;text-decoration:none;transition:border-color .25s,color .25s}
+.give-cta:hover{border-color:var(--glow);color:var(--pulse)}
+@media(max-width:520px){.give-big{font-size:22px}}
 .statline{
   font-size:11.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--glow);
   padding:14px 0 0;font-variant-numeric:tabular-nums;
@@ -1991,6 +2007,9 @@ function feedView(){
 
   h += '<div class="statline" id="feedstat"></div>';
 
+  // What the donations did. Filled by fillGiving once /api/giving answers.
+  h += '<section class="give" id="givingcard" hidden></section>';
+
   // Search the words people actually wrote. Nothing is filtered out of the
   // database and nothing is deleted — this hides rows from the page, and
   // emptying the box brings them all back.
@@ -2262,7 +2281,7 @@ function wire(){
       // Hold the user back so the key screen (part of the signed-out view) can show.
       setToken(d.token);
       pendingUser = d.user; pendingKey = d.user.lucidKey;
-      render(); loadStats();
+      render(); loadStats(); loadGiving();
       // Then ask the question, if the server has one. Fetched rather than
       // hard-coded here so the wording can change on the server without
       // waiting for everybody's browser to pick up a new page.
@@ -2786,11 +2805,13 @@ function wire(){
         setToken(null);
         me = null; view = 'landing'; viewing = null;
         cache = { posts:[], profile:null, encounters:null, submissions:null, pulse:null, sheep:null };
-        render(); loadStats();
+        render(); loadStats(); loadGiving();
       });
   }
   var stat = $('feedstat');
   if (stat) fillStat(stat);
+  var gcard = $('givingcard');
+  if (gcard) fillGiving(gcard);
 
   var so = $('signout'); if (so) so.onclick = doSignout;
   var tso = $('topSignout'); if (tso) tso.onclick = doSignout;
@@ -2854,6 +2875,84 @@ function openProfile(handle){
   return api('/api/profile/' + encodeURIComponent(handle)).then(function(d){
     cache.profile = d; render(); window.scrollTo(0,0);
   }).catch(function(err){ flash = { t:'err', m: err.message }; cache.profile = null; render(); });
+}
+
+/* ── what the donations did ───────────────
+   GIVEN, OWED and SENT are three different numbers and this card never adds
+   them together. Money is food only once it has left for a school; until
+   then it is owed, and the card says so. The meals figure is money sent
+   divided by that district's own published lunch price, with a link to
+   where the price is published, so a stranger can repeat the sum. */
+var giving = null;
+
+function loadGiving(){
+  return fetch(API + '/api/giving?x=' + Date.now())
+    .then(function(r){ return r.json(); })
+    .then(function(d){
+      giving = d;
+      var el = document.getElementById('givingcard');
+      if (el) fillGiving(el);
+    })
+    .catch(function(){ /* a missing card is not worth an error message */ });
+}
+
+function giveMoney(cents, cur){
+  var sym = cur === 'GBP' ? '£' : cur === 'EUR' ? '€' : '$';
+  return sym + (cents / 100).toLocaleString(undefined,
+    { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+
+function fillGiving(el){
+  if (!giving){ el.hidden = true; return; }
+  var g = giving, cur = g.currency || 'USD', h = '';
+  h += '<div class="give-eyebrow">A quarter of everything</div>';
+
+  if (g.meals > 0){
+    var g0 = (g.gifts_out || [])[0];
+    h += '<div class="give-big"><b>' + g.meals.toLocaleString() + '</b> school '
+       + (g.meals === 1 ? 'lunch' : 'lunches') + ' paid for</div>'
+       + '<p class="give-line">A quarter of everything Lucid is given goes to school meals.</p>'
+       + '<p class="give-work">'
+       + giveMoney(g.raised_cents, cur) + ' given to Lucid across ' + g.donations
+       + (g.donations === 1 ? ' donation' : ' donations') + '. '
+       + giveMoney(g.sent_cents, cur) + ' of it has reached '
+       + (g0 ? esc(g0.where_to) : 'a school')
+       + (g0 ? ', where one lunch costs ' + giveMoney(g0.price_cents, cur) : '') + '.';
+    if (g0 && g0.price_source){
+      h += ' <a href="' + esc(g0.price_source) + '" target="_blank" rel="noopener noreferrer">Their published price</a>.';
+    }
+    if (g.pledged_cents > g.sent_cents){
+      h += ' <span class="give-owed">' + giveMoney(g.pledged_cents - g.sent_cents, cur)
+         + ' more is owed and has not gone yet.</span>';
+    }
+    h += '</p>';
+
+  } else if (g.raised_cents > 0){
+    h += '<div class="give-big"><b>' + giveMoney(g.pledged_cents, cur) + '</b> owed to school lunches</div>'
+       + '<p class="give-line">A quarter of everything Lucid is given goes to school meals. '
+       + giveMoney(g.raised_cents, cur) + ' has been given so far, and none of that quarter has gone yet.</p>'
+       + '<p class="give-work">This card will say how many lunches it bought once the money has '
+       + 'actually left, and not before.</p>';
+
+  } else {
+    // The eyebrow above already says "A quarter of everything", so the big
+    // line finishes that sentence rather than repeating it.
+    h += '<div class="give-big">goes to school lunches</div>'
+       + '<p class="give-line">Nobody has given anything yet, so there is nothing here to count. '
+       + 'When somebody does, a quarter of it goes to school meals &mdash; and this card will say '
+       + 'how many, at which school, and what one lunch costs there.</p>';
+    if (typeof DONATE_URL === 'string' && DONATE_URL){
+      h += '<a class="give-cta" href="' + esc(DONATE_URL)
+         + '" target="_blank" rel="noopener noreferrer">Give something</a>';
+    }
+  }
+
+  if (g.mixedCurrencies){
+    h += '<p class="give-work">Donations have arrived in more than one currency. '
+       + 'The figures above are the ' + esc(cur) + ' ones only.</p>';
+  }
+  el.innerHTML = h;
+  el.hidden = false;
 }
 
 /* ── how many dreamers ───────────────────── */
@@ -2952,7 +3051,7 @@ function countVisit(){
 /* ── boot ────────────────────────────────── */
 render();
 countVisit();
-loadStats();
+loadStats(); loadGiving();
 api('/api/me').then(function(d){
   // loadFeed sets the view, so a signed-in arrival would otherwise be
   // bounced off the page the link asked for.
